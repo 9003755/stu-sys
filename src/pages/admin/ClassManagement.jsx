@@ -25,9 +25,14 @@ export default function ClassManagement({ onViewStudents }) {
   const fetchClasses = async () => {
     try {
       setLoading(true)
+      
+      const { data: { user } } = await supabaseAdmin.auth.getUser()
+      if (!user) return
+
       const { data, error } = await supabaseAdmin
         .from('classes')
         .select('*')
+        .eq('admin_id', user.id) // Filter strictly by admin_id
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -80,9 +85,16 @@ export default function ClassManagement({ onViewStudents }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      // Get current user to set admin_id
+      const { data: { user } } = await supabaseAdmin.auth.getUser()
+      if (!user) throw new Error('未登录')
+
       const { error } = await supabaseAdmin
         .from('classes')
-        .insert([formData])
+        .insert([{
+          ...formData,
+          admin_id: user.id // Explicitly set admin_id
+        }])
 
       if (error) throw error
       

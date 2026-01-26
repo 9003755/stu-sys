@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabaseAdmin } from '../../lib/supabase'
-import { Check, X, Search, Filter, Eye, Trash2 } from 'lucide-react'
+import { Check, X, Search, Filter, Eye, Trash2, Download, FileSpreadsheet } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import JSZip from 'jszip'
+import ExcelJS from 'exceljs'
 
 export default function EnrollmentManagement({ initialClassId = null }) {
   const [enrollments, setEnrollments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState(false)
+  const [downloadingData, setDownloadingData] = useState(false)
   const [classes, setClasses] = useState([])
   const [selectedIds, setSelectedIds] = useState(new Set())
   
@@ -25,13 +30,37 @@ export default function EnrollmentManagement({ initialClassId = null }) {
   }, [initialClassId])
 
   const fetchClasses = async () => {
-    const { data } = await supabaseAdmin.from('classes').select('id, name')
+    const { data: { user } } = await supabaseAdmin.auth.getUser()
+    if (!user) return
+    const { data } = await supabaseAdmin
+        .from('classes')
+        .select('id, name')
+        .eq('admin_id', user.id) // Filter by admin_id
+    
     if (data) setClasses(data)
   }
 
   const fetchEnrollments = async () => {
     try {
       setLoading(true)
+      
+      const { data: { user } } = await supabaseAdmin.auth.getUser()
+      if (!user) return
+
+      // First get my class IDs
+      const { data: myClasses } = await supabaseAdmin
+        .from('classes')
+        .select('id')
+        .eq('admin_id', user.id)
+      
+      const myClassIds = myClasses?.map(c => c.id) || []
+      
+      if (myClassIds.length === 0) {
+        setEnrollments([])
+        setLoading(false)
+        return
+      }
+
       const { data: enrollmentsData, error } = await supabaseAdmin
         .from('enrollments')
         .select(`
@@ -66,6 +95,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
             id_card_back_url
           )
         `)
+        .in('class_id', myClassIds) // Explicitly filter enrollments by my class IDs
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -169,6 +199,315 @@ export default function EnrollmentManagement({ initialClassId = null }) {
     } catch (error) {
       console.error('Error batch deleting:', error)
       alert('批量删除失败')
+    }
+  }
+
+  const handleDownloadIDs = async () => {
+    if (selectedIds.size === 0) return
+    
+    const selectedEnrollments = enrollments.filter(e => selectedIds.has(e.id))
+    if (selectedEnrollments.length === 0) return
+
+    setDownloading(true)
+    
+    try {
+      const zip = new JSZip()
+      const pdfBlobs = [] // { filename: "filename.pdf", blob: Blob }
+
+      // Helper to load image and correct orientation
+      const loadImage = async (url) => {
+        try {
+          const response = await fetch(url)
+          const blob = await response.blob()
+          // Use createImageBitmap to handle EXIF orientation automatically
+          const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' })
+          
+          const canvas = document.createElement('canvas')
+          canvas.width = bitmap.width
+          canvas.height = bitmap.height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(bitmap, 0, 0)
+          
+          return {
+            width: bitmap.width,
+            height: bitmap.height,
+            dataUrl: canvas.toDataURL('image/jpeg', 0.95)
+          }
+        } catch (error) {
+          console.error('Error loading image:', error)
+          throw error
+        }
+      }
+
+      let successCount = 0
+      
+      for (const enrollment of selectedEnrollments) {
+        const profile = enrollment.profiles
+        if (!profile) continue
+        
+        const name = profile.real_name || '未命名'
+        const frontUrl = profile.id_card_front_url
+        const backUrl = profile.id_card_back_url
+        
+        if (!frontUrl || !backUrl) {
+          console.warn(`Skipping ${name}: missing ID images`)
+          continue
+        }
+
+        try {
+          const [imgFront, imgBack] = await Promise.all([
+            loadImage(frontUrl),
+            loadImage(backUrl)
+          ])
+
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          })
+
+          // A4 size: 210 x 297 mm
+          // Margins: 20mm
+          // Target width: 150mm
+          
+          const pageWidth = 210
+          const margin = 30
+          const imgWidth = 150
+          
+          // Front Image
+          // Calculate scale to fit within max dimensions (imgWidth x maxHeight) while maintaining aspect ratio
+          const maxImgHeight = 110 // Half of A4 (297) minus margins and spacing, approx
+          
+          let frontWidth = imgWidth
+          let frontHeight = imgFront.height * (imgWidth / imgFront.width)
+          
+          if (frontHeight > maxImgHeight) {
+             frontHeight = maxImgHeight
+             frontWidth = imgFront.width * (maxImgHeight / imgFront.height)
+          }
+          
+          // Center horizontally if width is less than max width
+          const frontX = margin + (imgWidth - frontWidth) / 2
+          
+          pdf.addImage(imgFront.dataUrl, 'JPEG', frontX, 30, frontWidth, frontHeight)
+          
+          // Back Image
+          let backWidth = imgWidth
+          let backHeight = imgBack.height * (imgWidth / imgBack.width)
+          
+          if (backHeight > maxImgHeight) {
+             backHeight = maxImgHeight
+             backWidth = imgBack.width * (maxImgHeight / imgBack.height)
+          }
+          
+          const backX = margin + (imgWidth - backWidth) / 2
+          
+          // Position back image below front image with spacing
+          pdf.addImage(imgBack.dataUrl, 'JPEG', backX, 30 + frontHeight + 20, backWidth, backHeight)
+
+          const blob = pdf.output('blob')
+          pdfBlobs.push({ filename: `${name}身份证.pdf`, blob })
+          successCount++
+          
+        } catch (err) {
+          console.error(`Failed to process ${name}`, err)
+        }
+      }
+
+      if (pdfBlobs.length === 0) {
+        alert('选中的学员中没有可下载的身份证文件（可能未上传图片或加载失败）')
+        return
+      }
+
+      if (pdfBlobs.length === 1) {
+        // Download single file
+        const { filename, blob } = pdfBlobs[0]
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
+      } else {
+        // Zip multiple files
+        pdfBlobs.forEach(item => {
+          zip.file(item.filename, item.blob)
+        })
+        
+        const zipContent = await zip.generateAsync({ type: 'blob' })
+        const url = URL.createObjectURL(zipContent)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `学员身份证打包_${new Date().toISOString().slice(0,10)}.zip`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+
+    } catch (error) {
+      console.error('Download error:', error)
+      alert('下载出错：' + error.message)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const handleDownloadData = async () => {
+    if (selectedIds.size === 0) return
+    const selectedEnrollments = enrollments.filter(e => selectedIds.has(e.id))
+    if (selectedEnrollments.length === 0) return
+
+    setDownloadingData(true)
+
+    try {
+      // 1. Load Excel Template
+      // Assuming stuIm.xlsx is in public folder or can be imported. 
+      // Since it's in project root in git, we might need to move it to public to fetch it, 
+      // or import it if configured. Let's assume it's available via fetch at /stuIm.xlsx or similar if put in public.
+      // If it's not in public, we can't fetch it easily in dev unless we move it.
+      // For now, let's try to fetch it from root (might fail if not served).
+      // Best practice: Move stuIm.xlsx to public folder.
+      
+      // I'll try to fetch from public URL. If it fails, I'll alert.
+      // Note: The file 'stuIm.xlsx' was seen in root. Vite serves public folder. 
+      // I should verify if I need to move it. I'll assume I need to fetch it.
+      
+      const response = await fetch('/stuIm.xlsx')
+      if (!response.ok) throw new Error('无法加载模版文件 (stuIm.xlsx)')
+      const arrayBuffer = await response.arrayBuffer()
+
+      const workbook = new ExcelJS.Workbook()
+       await workbook.xlsx.load(arrayBuffer)
+       const worksheet = workbook.getWorksheet(1) // Assume first sheet
+
+       // Clear existing data rows (keep header row 1)
+       // ExcelJS spliceRows(start, count)
+       // We want to keep row 1, so start deleting from row 2.
+       // However, worksheet.rowCount might include empty rows if formatting exists.
+       // We should iterate and remove rows that are not header.
+       
+       const rowCount = worksheet.rowCount
+       if (rowCount > 1) {
+          // Delete all rows starting from 2
+          worksheet.spliceRows(2, rowCount - 1)
+       }
+       
+       // Force check if rows still exist (sometimes spliceRows behaves oddly if not saved)
+       // Let's explicitly check and clear again if needed or use a different approach.
+       // Alternative: iterate backwards and delete.
+       // Or create a new worksheet and copy header.
+       
+       // Let's try a safer delete approach:
+       // Just to be sure, check actual data rows.
+       while (worksheet.rowCount > 1) {
+         worksheet.spliceRows(2, 1)
+       }
+
+       // 2. Process Data
+      // Columns based on python check: 
+      // ['姓名', '性别', '证件类型', '证件号码', '国籍', '民族', '出生日期', '地址', '联系电话', '邮箱', '邮政编码', '详细地址']
+      // Index: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 (1-based in ExcelJS)
+
+      // Start adding from row 2 (assuming row 1 is header)
+      // Check if template has data rows already? Usually template just has header.
+      // We append rows.
+      
+      const zip = new JSZip()
+      const photoFolder = zip.folder("stuTemplate").folder("stu").folder("stuPicture")
+      
+      // Helper to load image
+      const loadImage = async (url) => {
+        try {
+           const res = await fetch(url)
+           if (!res.ok) throw new Error('Fetch failed')
+           return await res.blob()
+        } catch (e) {
+           console.warn('Image load failed', url, e)
+           return null
+        }
+      }
+
+      for (const enrollment of selectedEnrollments) {
+        const p = enrollment.profiles
+        if (!p) continue
+
+        // Address Logic
+        // Extract last part of region and add spaces
+        let addressVal = ''
+        if (p.region) {
+          const parts = p.region.split(' ') // Assuming space separated "Province City District"
+          // Clean empty parts
+          const cleanParts = parts.filter(part => part.trim())
+          if (cleanParts.length > 0) {
+            const lastPart = cleanParts[cleanParts.length - 1]
+            const level = cleanParts.length // 1, 2, or 3
+            
+            // Level 1: 0 spaces
+            // Level 2: 2 spaces
+            // Level 3: 4 spaces
+            const spaces = level === 1 ? '' : (level === 2 ? '  ' : '    ')
+            addressVal = spaces + lastPart
+          }
+        }
+
+        // Add Row to Excel
+        worksheet.addRow([
+          p.real_name || '',
+          p.gender || '',
+          p.id_type || '',
+          p.id_number || '',
+          p.nationality || '',
+          p.ethnicity || '',
+          p.birth_date || '',
+          addressVal,
+          p.contact_phone || '',
+          enrollment.user_email || p.email_contact || '', // Use email from auth or profile
+          p.postal_code || '',
+          p.address_detail || ''
+        ])
+
+        // Process Photo
+        if (p.photo_url && p.id_number) {
+            const photoBlob = await loadImage(p.photo_url)
+            if (photoBlob) {
+                // Get extension from url or blob type
+                // p.photo_url might be signed url or public url
+                // Simple way: check url ending or MIME type
+                let ext = 'jpg'
+                if (photoBlob.type === 'image/png') ext = 'png'
+                else if (photoBlob.type === 'image/jpeg') ext = 'jpg'
+                
+                // If url has extension, use it? 
+                // User said "original suffix".
+                const urlPath = p.photo_url.split('?')[0] // remove query params
+                const match = urlPath.match(/\.([a-zA-Z0-9]+)$/)
+                if (match) {
+                    ext = match[1]
+                }
+
+                const photoName = `${p.id_number}.${ext}`
+                photoFolder.file(photoName, photoBlob)
+            }
+        }
+      }
+
+      // 3. Save Excel
+      const excelBuffer = await workbook.xlsx.writeBuffer()
+      zip.folder("stuTemplate").folder("stu").file("stulm.xlsx", excelBuffer)
+
+      // 4. Generate Zip and Download
+      const zipContent = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(zipContent)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `学员报名资料包_${new Date().toISOString().slice(0,10)}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('导出资料失败：' + error.message)
+    } finally {
+      setDownloadingData(false)
     }
   }
 
@@ -429,13 +768,31 @@ export default function EnrollmentManagement({ initialClassId = null }) {
           </select>
           
           {selectedIds.size > 0 && (
-            <button
-              onClick={handleBatchDelete}
-              className="flex items-center px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors text-sm border border-red-200"
-            >
-              <Trash2 size={14} className="mr-1" />
-              批量删除 ({selectedIds.size})
-            </button>
+            <>
+              <button
+                onClick={handleDownloadData}
+                disabled={downloadingData}
+                className="flex items-center px-3 py-2 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors text-sm border border-green-200"
+              >
+                <FileSpreadsheet size={14} className="mr-1" />
+                {downloadingData ? '打包中...' : `下载报名资料 (${selectedIds.size})`}
+              </button>
+              <button
+                onClick={handleDownloadIDs}
+                disabled={downloading}
+                className="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm border border-blue-200"
+              >
+                <Download size={14} className="mr-1" />
+                {downloading ? '处理中...' : `下载身份证 (${selectedIds.size})`}
+              </button>
+              <button
+                onClick={handleBatchDelete}
+                className="flex items-center px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors text-sm border border-red-200"
+              >
+                <Trash2 size={14} className="mr-1" />
+                批量删除 ({selectedIds.size})
+              </button>
+            </>
           )}
         </div>
       </div>

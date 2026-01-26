@@ -11,10 +11,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Separate client for Admins (uses distinct storage key to allow simultaneous login)
+// IMPORTANT: persistSession must be true to maintain login state.
 export const supabaseAdmin = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storageKey: 'student-system-admin-token',
     persistSession: true,
-    detectSessionInUrl: false // Prevent admin from picking up student magic links
+    detectSessionInUrl: false
+  }
+})
+
+// Separate client for Super Admins
+export const supabaseSuper = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storageKey: 'student-system-super-token',
+    persistSession: true,
+    detectSessionInUrl: false
   }
 })

@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('classes') // 'classes' or 'students'
   const [selectedClassId, setSelectedClassId] = useState(null) // For filtering students from class list
+  const [adminProfile, setAdminProfile] = useState(null)
 
   useEffect(() => {
     // Verify admin status on mount
@@ -29,6 +30,7 @@ export default function AdminDashboard() {
       if (error || !data) {
         navigate('/') // Kick non-admins back to home
       } else {
+        setAdminProfile(data)
         setLoading(false)
       }
     }
@@ -54,9 +56,24 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <div className="flex-shrink-0 text-white font-bold text-xl">
+              <div className="flex-shrink-0 text-white font-bold text-xl mr-8">
                 报名系统管理后台
               </div>
+              
+              {/* Admin Info Badge */}
+              {adminProfile && (
+                <div className="flex items-center bg-gray-900 rounded-full px-4 py-1.5 mr-6 border border-gray-700">
+                  <div className="h-2 w-2 rounded-full bg-green-400 mr-2 animate-pulse"></div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-400">当前登录</span>
+                    <span className="text-sm font-medium text-white leading-none">
+                      {adminProfile.full_name || '管理员'} 
+                      <span className="text-gray-500 ml-2 font-normal text-xs">({adminUser?.email})</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
                   <button 

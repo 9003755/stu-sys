@@ -1,12 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AdminAuthProvider } from './contexts/AdminAuthContext'
+import { SuperAuthProvider } from './contexts/SuperAuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import StudentProfile from './pages/StudentProfile'
 import EnrollConfirmation from './pages/EnrollConfirmation'
-import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminRegister from './pages/admin/AdminRegister'
+import SuperLogin from './pages/super/SuperLogin'
+import SuperDashboard from './pages/super/SuperDashboard'
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
@@ -113,23 +116,30 @@ function App() {
     <Router>
       <AuthProvider>
         <AdminAuthProvider>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route 
-              path="/student/profile" 
-              element={
-                <ProtectedRoute>
-                  <StudentProfile />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="/enroll/:classId" element={<EnrollConfirmation />} />
-            {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          </Routes>
+          <SuperAuthProvider>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route 
+                path="/student/profile" 
+                element={
+                  <ProtectedRoute>
+                    <StudentProfile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="/enroll/:classId" element={<EnrollConfirmation />} />
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<Navigate to="/login?role=admin" replace />} />
+              <Route path="/admin/register" element={<AdminRegister />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              
+              {/* Super Admin Routes */}
+              <Route path="/super/login" element={<SuperLogin />} />
+              <Route path="/super/dashboard" element={<SuperDashboard />} />
+            </Routes>
+          </SuperAuthProvider>
         </AdminAuthProvider>
       </AuthProvider>
     </Router>

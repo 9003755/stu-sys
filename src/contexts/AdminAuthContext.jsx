@@ -26,10 +26,35 @@ export const AdminAuthProvider = ({ children }) => {
   }, [])
 
   const adminSignIn = async (email, password) => {
-    return await supabaseAdmin.auth.signInWithPassword({
+    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
       email,
       password,
     })
+    
+    if (error) return { data, error }
+    
+    // Safely check if user object exists before accessing id
+    if (!data?.user) {
+        return { data: null, error: { message: '登录返回数据异常' } }
+    }
+    
+    // Check if user is actually an admin
+    const { data: adminData, error: adminError } = await supabaseAdmin
+      .from('admins')
+      .select('id')
+      .eq('user_id', data.user.id)
+      .single()
+      
+    if (adminError || !adminData) {
+      // Not an admin, sign out immediately
+      await supabaseAdmin.auth.signOut()
+      return { 
+        data: null, 
+        error: { message: '该账号没有管理员权限' } 
+      }
+    }
+    
+    return { data, error: null }
   }
 
   const adminSignOut = async () => {
