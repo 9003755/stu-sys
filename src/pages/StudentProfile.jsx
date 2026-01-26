@@ -59,6 +59,102 @@ const SelectField = ({ label, name, options, required = false, register, errors 
   </div>
 )
 
+const DateSelector = ({ label, name, required = false, register, setValue, watch, errors }) => {
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 80 }, (_, i) => currentYear - i) // 最近80年
+  const months = Array.from({ length: 12 }, (_, i) => i + 1)
+
+  const dateValue = watch(name)
+  
+  const [year, setYear] = useState('')
+  const [month, setMonth] = useState('')
+  const [day, setDay] = useState('')
+
+  useEffect(() => {
+    if (dateValue) {
+      const date = new Date(dateValue)
+      if (!isNaN(date.getTime())) {
+        setYear(date.getFullYear())
+        setMonth(date.getMonth() + 1)
+        setDay(date.getDate())
+      }
+    }
+  }, [dateValue])
+
+  const daysInMonth = useMemo(() => {
+    if (!year || !month) return 31
+    return new Date(year, month, 0).getDate()
+  }, [year, month])
+
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+
+  const updateDate = (newYear, newMonth, newDay) => {
+    if (newYear) setYear(newYear)
+    if (newMonth) setMonth(newMonth)
+    if (newDay) setDay(newDay)
+
+    const y = newYear || year
+    const m = newMonth || month
+    const d = newDay || day
+
+    if (y && m && d) {
+      const str = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      setValue(name, str, { shouldValidate: true, shouldDirty: true })
+    }
+  }
+
+  return (
+    <div className="col-span-1 md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="relative">
+          <select
+            value={year}
+            onChange={(e) => updateDate(Number(e.target.value), null, null)}
+            className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+          >
+            <option value="">年</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-gray-400">
+            <ChevronDown size={14} />
+          </div>
+        </div>
+        <div className="relative">
+          <select
+            value={month}
+            onChange={(e) => updateDate(null, Number(e.target.value), null)}
+            className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+          >
+            <option value="">月</option>
+            {months.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-gray-400">
+            <ChevronDown size={14} />
+          </div>
+        </div>
+        <div className="relative">
+          <select
+            value={day}
+            onChange={(e) => updateDate(null, null, Number(e.target.value))}
+            className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+          >
+            <option value="">日</option>
+            {days.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-gray-400">
+            <ChevronDown size={14} />
+          </div>
+        </div>
+      </div>
+      <input type="hidden" {...register(name, { required: required && `${label}不能为空` })} />
+      {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name].message}</p>}
+    </div>
+  )
+}
+
 export default function StudentProfile({ classId, onSuccess }) {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -109,6 +205,25 @@ export default function StudentProfile({ classId, onSuccess }) {
             setValue(key, data[key])
           })
           if (data.region) setAddressSearch(data.region)
+        } else {
+          // 如果数据库中没有档案，尝试从本地缓存恢复草稿 (防止手机端刷新导致数据丢失)
+          const draft = localStorage.getItem(`student_profile_draft_${user.id}`)
+          if (draft) {
+            try {
+              const parsed = JSON.parse(draft)
+              Object.keys(parsed).forEach(key => {
+                // 跳过文件对象（无法序列化）
+                if (key !== 'idCardFront' && key !== 'idCardBack' && key !== 'photo') {
+                  setValue(key, parsed[key])
+                }
+              })
+              if (parsed.region) setAddressSearch(parsed.region)
+              // 如果有草稿，提示用户
+              setMsg({ type: 'success', content: '已为您恢复上次未提交的填写记录' })
+            } catch (e) {
+              console.error('Failed to restore draft', e)
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching profile:', error)
@@ -131,6 +246,20 @@ export default function StudentProfile({ classId, onSuccess }) {
     getProfile()
     getClassInfo()
   }, [user, setValue, classId])
+
+  // 自动保存草稿
+  useEffect(() => {
+    if (!user) return
+    const subscription = watch((value) => {
+      // 仅保存非文件字段
+      const draft = { ...value }
+      delete draft.idCardFront
+      delete draft.idCardBack
+      delete draft.photo
+      localStorage.setItem(`student_profile_draft_${user.id}`, JSON.stringify(draft))
+    })
+    return () => subscription.unsubscribe()
+  }, [watch, user])
 
   const uploadFile = async (file, path) => {
     try {
@@ -247,6 +376,9 @@ export default function StudentProfile({ classId, onSuccess }) {
           if (enrollError) throw enrollError
         }
         
+        // 提交成功，清除草稿
+        localStorage.removeItem(`student_profile_draft_${user.id}`)
+        
         setMsg({ type: 'success', content: '报名成功！即将跳转...' })
         // Use a longer timeout and ensure state update is processed
         setTimeout(() => {
@@ -257,6 +389,9 @@ export default function StudentProfile({ classId, onSuccess }) {
            }
         }, 1500)
       } else {
+        // 保存成功，清除草稿
+        localStorage.removeItem(`student_profile_draft_${user.id}`)
+        
         setMsg({ type: 'success', content: '档案保存成功！' })
         setTimeout(() => {
           navigate('/')
@@ -311,7 +446,7 @@ export default function StudentProfile({ classId, onSuccess }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <InputField label="姓名" name="real_name" placeholder="请输入姓名" required register={register} errors={errors} />
                 <SelectField label="性别" name="gender" options={['男', '女']} required register={register} errors={errors} />
-                <InputField label="出生日期" name="birth_date" type="date" required icon={Calendar} register={register} errors={errors} />
+                <DateSelector label="出生日期" name="birth_date" required register={register} setValue={setValue} watch={watch} errors={errors} />
                 <SelectField label="国籍" name="nationality" options={NATIONS} required register={register} errors={errors} />
                 <SelectField label="民族" name="ethnicity" options={ETHNICITIES} required register={register} errors={errors} />
               </div>
@@ -395,7 +530,12 @@ export default function StudentProfile({ classId, onSuccess }) {
                     type="file" 
                     accept="image/*" 
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    {...register('idCardFront', { required: !profileId && '请上传身份证正面' })} 
+                    {...register('idCardFront', { 
+                      required: !profileId && '请上传身份证正面',
+                      validate: {
+                        fileSize: files => !files?.[0] || files[0].size < 10 * 1024 * 1024 || '图片大小不能超过10MB'
+                      }
+                    })} 
                   />
                    {watch('id_card_front_url') && <p className="text-xs text-green-600 mt-2 z-10">已上传</p>}
                    {watch('idCardFront')?.[0]?.name && <p className="text-xs text-gray-600 mt-2 z-10">{watch('idCardFront')[0].name}</p>}
@@ -409,7 +549,12 @@ export default function StudentProfile({ classId, onSuccess }) {
                     type="file" 
                     accept="image/*" 
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    {...register('idCardBack', { required: !profileId && '请上传身份证反面' })} 
+                    {...register('idCardBack', { 
+                      required: !profileId && '请上传身份证反面',
+                      validate: {
+                        fileSize: files => !files?.[0] || files[0].size < 10 * 1024 * 1024 || '图片大小不能超过10MB'
+                      }
+                    })} 
                   />
                    {watch('id_card_back_url') && <p className="text-xs text-green-600 mt-2 z-10">已上传</p>}
                    {watch('idCardBack')?.[0]?.name && <p className="text-xs text-gray-600 mt-2 z-10">{watch('idCardBack')[0].name}</p>}
@@ -423,7 +568,12 @@ export default function StudentProfile({ classId, onSuccess }) {
                     type="file" 
                     accept="image/*" 
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    {...register('photo', { required: !profileId && '请上传证件照' })} 
+                    {...register('photo', { 
+                      required: !profileId && '请上传证件照',
+                      validate: {
+                        fileSize: files => !files?.[0] || files[0].size < 10 * 1024 * 1024 || '图片大小不能超过10MB'
+                      }
+                    })} 
                   />
                    {watch('photo_url') && <p className="text-xs text-green-600 mt-2 z-10">已上传</p>}
                    {watch('photo')?.[0]?.name && <p className="text-xs text-gray-600 mt-2 z-10">{watch('photo')[0].name}</p>}
