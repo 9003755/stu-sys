@@ -5,7 +5,59 @@ import { supabase } from '../lib/supabase'
 import { NATIONS, ETHNICITIES, ID_TYPES, ADDRESSES } from '../lib/constants'
 import { useNavigate } from 'react-router-dom'
 import { Upload, ChevronDown, Calendar, Search, Loader2, CheckCircle, XCircle } from 'lucide-react'
-import imageCompression from 'browser-image-compression'
+
+// Helper: Lightweight image compression using Canvas
+const compressImage = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target.result
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        // Max dimensions
+        const MAX_WIDTH = 1200
+        const MAX_HEIGHT = 1200
+        let width = img.width
+        let height = img.height
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width
+            width = MAX_WIDTH
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height
+            height = MAX_HEIGHT
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+
+        // Compress to JPEG with 0.7 quality
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Canvas compression failed'))
+            return
+          }
+          // Create new file from blob
+          const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          })
+          resolve(newFile)
+        }, 'image/jpeg', 0.7)
+      }
+      img.onerror = (err) => reject(new Error('Image load failed'))
+    }
+    reader.onerror = (err) => reject(new Error('File read failed'))
+  })
+}
 
 // UI Components - Defined OUTSIDE the main component to prevent re-mounting on every render
 const SectionTitle = ({ title }) => (
@@ -33,20 +85,26 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
     setUploadError(null)
 
     try {
-      // 1. Compression
-      const options = {
-        maxSizeMB: 0.8, // Compress to ~800KB
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        fileType: 'image/jpeg'
-      }
-      
+      // 1. Compression (Native Canvas)
       console.log(`Original size: ${file.size / 1024 / 1024} MB`)
-      const compressedFile = await imageCompression(file, options)
-      console.log(`Compressed size: ${compressedFile.size / 1024 / 1024} MB`)
+      
+      let compressedFile = file
+      // Only compress if larger than 1MB
+      if (file.size > 1024 * 1024) {
+         try {
+           compressedFile = await compressImage(file)
+           console.log(`Compressed size: ${compressedFile.size / 1024 / 1024} MB`)
+         } catch (compErr) {
+           console.warn('Compression failed, using original:', compErr)
+           // Fallback to original if compression fails, but warn if too big
+           if (file.size > 10 * 1024 * 1024) {
+             throw new Error('图片过大且压缩失败，请选择更小的图片')
+           }
+         }
+      }
 
       // 2. Upload
-      const fileExt = 'jpg' // Converted to jpeg by compression
+      const fileExt = 'jpg' 
       const fileName = `${Math.random()}.${fileExt}`
       const filePath = `${bucketPath}/${fileName}`
 
@@ -513,12 +571,21 @@ export default function StudentProfile({ classId, onSuccess }) {
           {classInfo ? (
             <>
               <span className="block text-lg font-medium text-blue-600 mb-2">您正在报名：{classInfo.name}</span>
-              完善资料以完成报名
+              完善资料以完成报名 <span className="text-xs text-gray-400 font-normal ml-2">v1.2</span>
             </>
-          ) : '学员档案'}
+          ) : '学员档案 v1.2'}
         </h1>
         
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Debug Info for Mobile */}
+          <div className="px-8 pt-4 pb-0">
+             <details className="text-xs text-gray-300">
+               <summary>调试日志</summary>
+               <pre className="mt-2 p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-32">
+                 {`User: ${user?.email}\nUA: ${navigator.userAgent}`}
+               </pre>
+             </details>
+          </div>
           <form onSubmit={handleSubmit(onSubmit, onError)} className="p-8 space-y-10">
             {msg.content && (
               <div className={`p-4 rounded-lg ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
