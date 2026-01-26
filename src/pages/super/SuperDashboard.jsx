@@ -3,7 +3,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabaseSuper } from '../../lib/supabase'
 import { useSuperAuth } from '../../contexts/SuperAuthContext'
-import { Shield, UserPlus, Users, Trash2, RefreshCw, LogOut, Key } from 'lucide-react'
+import { Shield, UserPlus, Users, Trash2, RefreshCw, LogOut, Key, XCircle } from 'lucide-react'
 
 export default function SuperDashboard() {
   const { superSignOut } = useSuperAuth()
@@ -84,6 +84,8 @@ export default function SuperDashboard() {
   const [newPassword, setNewPassword] = useState('')
 
   const [lostData, setLostData] = useState([])
+  const [zombieUsers, setZombieUsers] = useState([])
+  const [showZombieModal, setShowZombieModal] = useState(false)
 
   const fetchAdmins = async () => {
     try {
@@ -104,11 +106,15 @@ export default function SuperDashboard() {
          const existingEmails = new Set((data || []).map(a => a.email))
          const trulyLost = lost.filter(l => !existingEmails.has(l.user_email))
          
-         // Ensure admin_id is present, if not, use whatever ID we have
-         // find_lost_super_data returns: admin_id, user_email, class_count...
-         console.log('Lost Data Found:', trulyLost)
-         
-         setLostData(trulyLost)
+         if (trulyLost.length > 0) {
+            setLostData(trulyLost)
+         }
+      }
+
+      // Check for zombie users
+      const { data: zombies, error: zombieError } = await supabaseSuper.rpc('get_zombie_users')
+      if (!zombieError && zombies) {
+        setZombieUsers(zombies)
       }
 
     } catch (error) {
@@ -117,6 +123,21 @@ export default function SuperDashboard() {
       setLoading(false)
     }
   }
+
+  const handleDeleteZombie = async (userId, email) => {
+    if (!window.confirm(`确定要删除无效账号 "${email}" 吗？此操作无法撤销。`)) return
+
+    try {
+      const { error } = await supabaseSuper.rpc('delete_zombie_user', { target_user_id: userId })
+      if (error) throw error
+
+      setZombieUsers(prev => prev.filter(u => u.user_id !== userId))
+      alert('已删除无效账号')
+    } catch (error) {
+      alert('删除失败: ' + error.message)
+    }
+  }
+
 
   const handleCreateAdmin = async (e) => {
     e.preventDefault()
@@ -362,11 +383,22 @@ export default function SuperDashboard() {
             <Users className="mr-3 text-blue-400" />
             管理员管理
           </h2>
-          <div className="text-sm text-gray-400 flex items-center">
-             <span className="mr-2">💡 新增管理员请访问：</span>
-             <a href="/admin/register" target="_blank" className="text-blue-400 hover:text-blue-300 underline">
-               /admin/register
-             </a>
+          <div className="flex items-center space-x-4">
+            {zombieUsers.length > 0 && (
+              <button 
+                onClick={() => setShowZombieModal(true)}
+                className="flex items-center px-3 py-1.5 text-sm bg-red-900/30 text-red-400 border border-red-800 rounded hover:bg-red-900/50 transition-colors"
+              >
+                <Trash2 size={14} className="mr-2" />
+                发现 {zombieUsers.length} 个无效账号
+              </button>
+            )}
+            <div className="text-sm text-gray-400 flex items-center">
+               <span className="mr-2">💡 新增管理员请访问：</span>
+               <a href="/admin/register" target="_blank" className="text-blue-400 hover:text-blue-300 underline">
+                 /admin/register
+               </a>
+            </div>
           </div>
         </div>
 
@@ -514,6 +546,75 @@ export default function SuperDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Zombie Users Modal */}
+      {showZombieModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-lg max-w-2xl w-full border border-gray-700 shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="p-6 border-b border-gray-700 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center">
+                  <span className="mr-2">👻</span> 清理无效账号 (僵尸用户)
+                </h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  以下账号已注册但未填写任何学员档案，也非管理员。
+                </p>
+              </div>
+              <button onClick={() => setShowZombieModal(false)} className="text-gray-400 hover:text-white">
+                <XCircle size={24} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-0">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-900/50 sticky top-0">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">账号 (Email)</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">注册时间</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700 bg-gray-800">
+                  {zombieUsers.map((user) => (
+                    <tr key={user.user_id} className="hover:bg-gray-700/50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">
+                        {user.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(user.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <button
+                          onClick={() => handleDeleteZombie(user.user_id, user.email)}
+                          className="text-red-400 hover:text-red-300 border border-red-900/50 hover:bg-red-900/20 px-3 py-1 rounded transition-colors"
+                        >
+                          删除
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {zombieUsers.length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
+                        暂无无效账号
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="p-4 border-t border-gray-700 bg-gray-900/30 text-right">
+              <button
+                onClick={() => setShowZombieModal(false)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Modal */}
       {showCreateModal && (
