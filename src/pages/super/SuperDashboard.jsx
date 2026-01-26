@@ -33,6 +33,7 @@ export default function SuperDashboard() {
 
   useEffect(() => {
     fetchAdmins()
+    fetchStudents()
   }, [])
 
   const fetchAdminDetails = async (adminId) => {
@@ -87,6 +88,22 @@ export default function SuperDashboard() {
   const [zombieUsers, setZombieUsers] = useState([])
   const [selectedZombies, setSelectedZombies] = useState(new Set())
   const [showZombieModal, setShowZombieModal] = useState(false)
+  
+  const [students, setStudents] = useState([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+
+  const fetchStudents = async () => {
+    try {
+      setLoadingStudents(true)
+      const { data, error } = await supabaseSuper.rpc('get_all_students_overview')
+      if (error) throw error
+      setStudents(data || [])
+    } catch (error) {
+      console.error('Error fetching students:', error)
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
 
   const fetchAdmins = async () => {
     try {
@@ -594,7 +611,69 @@ export default function SuperDashboard() {
         </div>
       </main>
 
-      {/* Zombie Users Modal */}
+      {/* Student Overview */}
+        <div className="mt-12 mb-8">
+           <h2 className="text-2xl font-bold flex items-center mb-6">
+             <Users className="mr-3 text-green-400" />
+             学员总览
+           </h2>
+           <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-700">
+             <div className="overflow-x-auto">
+               <table className="min-w-full divide-y divide-gray-700">
+                 <thead className="bg-gray-750">
+                   <tr>
+                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">学员账号 (Email)</th>
+                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">姓名</th>
+                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">班级</th>
+                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">所属管理员</th>
+                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">资料状态</th>
+                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">注册时间</th>
+                   </tr>
+                 </thead>
+                 <tbody className="bg-gray-800 divide-y divide-gray-700">
+                   {loadingStudents ? (
+                     <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-500">加载数据中...</td></tr>
+                   ) : students.length === 0 ? (
+                     <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-500">暂无学员数据</td></tr>
+                   ) : (
+                     students.map((student) => (
+                       <tr key={`${student.student_id}-${student.class_name || 'noclass'}`} className="hover:bg-gray-750 transition-colors">
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">
+                           {student.student_email}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
+                           {student.student_name || '-'}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-400">
+                           {student.class_name || <span className="text-gray-600 italic">未分班</span>}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                           {student.admin_name || <span className="text-gray-600 italic">-</span>}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm">
+                           {student.has_profile ? (
+                             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                               已填写
+                             </span>
+                           ) : (
+                             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                               未填写
+                             </span>
+                           )}
+                         </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                           {new Date(student.registered_at).toLocaleDateString()}
+                         </td>
+                       </tr>
+                     ))
+                   )}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+        </div>
+
+        {/* Zombie Users Modal */}
       {showZombieModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-gray-800 rounded-lg max-w-2xl w-full border border-gray-700 shadow-2xl flex flex-col max-h-[80vh]">
