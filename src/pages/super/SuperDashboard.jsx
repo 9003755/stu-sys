@@ -264,10 +264,10 @@ export default function SuperDashboard() {
     if (!selectedAdmin) return
 
     try {
-      const { error } = await supabaseSuper.auth.admin.updateUserById(
-        selectedAdmin.user_id,
-        { password: newPassword }
-      )
+      const { error } = await supabaseSuper.rpc('reset_user_password', {
+        target_user_id: selectedAdmin.user_id,
+        new_password: newPassword
+      })
       
       if (error) throw error
 
