@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { NATIONS, ETHNICITIES, ID_TYPES, ADDRESSES } from '../lib/constants'
 import { useNavigate } from 'react-router-dom'
-import { Upload, ChevronDown, Calendar, Search } from 'lucide-react'
+import { Upload, ChevronDown, Calendar, Search, Loader2, CheckCircle, XCircle } from 'lucide-react'
+import imageCompression from 'browser-image-compression'
 
 // UI Components - Defined OUTSIDE the main component to prevent re-mounting on every render
 const SectionTitle = ({ title }) => (
@@ -13,6 +14,120 @@ const SectionTitle = ({ title }) => (
     <h3 className="text-lg font-bold text-gray-900">{title}</h3>
   </div>
 )
+
+const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error }) => {
+  const [uploading, setUploading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(defaultUrl)
+  const [uploadError, setUploadError] = useState(null)
+  
+  // Sync preview if defaultUrl changes (e.g. draft restored or data fetched)
+  useEffect(() => {
+    if (defaultUrl) setPreviewUrl(defaultUrl)
+  }, [defaultUrl])
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    setUploading(true)
+    setUploadError(null)
+
+    try {
+      // 1. Compression
+      const options = {
+        maxSizeMB: 0.8, // Compress to ~800KB
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        fileType: 'image/jpeg'
+      }
+      
+      console.log(`Original size: ${file.size / 1024 / 1024} MB`)
+      const compressedFile = await imageCompression(file, options)
+      console.log(`Compressed size: ${compressedFile.size / 1024 / 1024} MB`)
+
+      // 2. Upload
+      const fileExt = 'jpg' // Converted to jpeg by compression
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `${bucketPath}/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('student-documents')
+        .upload(filePath, compressedFile)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('student-documents')
+        .getPublicUrl(filePath)
+
+      const publicUrl = data.publicUrl
+      setPreviewUrl(publicUrl)
+      
+      // 3. Callback
+      onUploadComplete(publicUrl)
+
+    } catch (err) {
+      console.error('Upload failed:', err)
+      setUploadError(err.message || '上传失败，请重试')
+      onUploadComplete(null) // Clear value on error
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className={`relative border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center transition-colors min-h-[160px] 
+      ${error ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
+      
+      {uploading ? (
+        <div className="flex flex-col items-center text-blue-600">
+          <Loader2 className="h-8 w-8 animate-spin mb-2" />
+          <span className="text-xs">处理并上传中...</span>
+        </div>
+      ) : previewUrl ? (
+        <div className="relative w-full h-full flex flex-col items-center">
+          <img src={previewUrl} alt="Preview" className="h-24 object-contain mb-2 rounded shadow-sm" />
+          <p className="text-xs text-green-600 flex items-center mb-1">
+            <CheckCircle size={12} className="mr-1" /> 已上传
+          </p>
+          <label className="cursor-pointer text-xs text-blue-500 underline hover:text-blue-700 z-10">
+            重新上传
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
+        </div>
+      ) : (
+        <>
+          <Upload className={`h-8 w-8 mb-2 ${error ? 'text-red-400' : 'text-gray-400'}`} />
+          <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+            {label} <span className="text-red-500">*</span>
+          </label>
+          {uploadError ? (
+             <p className="text-xs text-red-500 mt-1 mb-2 text-center">{uploadError}</p>
+          ) : (
+             <p className="text-xs text-gray-400 mt-1 mb-2 text-center">点击选择或拍摄 (自动压缩)</p>
+          )}
+          
+          {/* The input covers the whole area for easier clicking */}
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={handleFileChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+        </>
+      )}
+      
+      {error && !uploading && !previewUrl && (
+        <p className="text-red-500 text-xs mt-1 z-10 font-bold">{error.message}</p>
+      )}
+    </div>
+  )
+}
 
 const InputField = ({ label, name, type = "text", placeholder, required = false, colSpan = 1, icon: Icon, register, errors }) => (
   <div className={`${colSpan === 2 ? 'col-span-1 md:col-span-2' : 'col-span-1'}`}>
@@ -262,28 +377,8 @@ export default function StudentProfile({ classId, onSuccess }) {
   }, [watch, user])
 
   const uploadFile = async (file, path) => {
-    try {
-      if (!file) return null
-      
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `${path}/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('student-documents')
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage
-        .from('student-documents')
-        .getPublicUrl(filePath)
-
-      return data.publicUrl
-    } catch (error) {
-      console.error('Error uploading file:', error)
-      throw error
-    }
+    // Deprecated: Logic moved to ImageUpload component
+    return null
   }
 
   const onSubmit = async (data) => {
@@ -291,22 +386,13 @@ export default function StudentProfile({ classId, onSuccess }) {
       setLoading(true)
       setMsg({ type: '', content: '' })
 
+      // Photo URLs are already in data.photo_url etc via setValue from ImageUpload
       let photoUrl = data.photo_url
       let frontUrl = data.id_card_front_url
       let backUrl = data.id_card_back_url
 
-      if (data.photo?.[0]) {
-        setUploading(true)
-        photoUrl = await uploadFile(data.photo[0], `photos/${user.id}`)
-      }
-      if (data.idCardFront?.[0]) {
-        setUploading(true)
-        frontUrl = await uploadFile(data.idCardFront[0], `id-front/${user.id}`)
-      }
-      if (data.idCardBack?.[0]) {
-        setUploading(true)
-        backUrl = await uploadFile(data.idCardBack[0], `id-back/${user.id}`)
-      }
+      // Validate manually if needed (though 'required' in hidden input handles it)
+      if (!photoUrl && !data.photo_url) throw new Error('请等待所有图片上传完成')
 
       setUploading(false)
 
@@ -518,66 +604,55 @@ export default function StudentProfile({ classId, onSuccess }) {
               </div>
             </section>
 
-             {/* Uploads (Keep existing logic but refine style if needed, kept simple for now) */}
+             {/* Uploads */}
              <section>
               <SectionTitle title="资料上传" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* ID Front */}
-                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                  <label className="block text-sm font-medium text-gray-700 mb-1">身份证正面 <span className="text-red-500">*</span></label>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    {...register('idCardFront', { 
-                      required: !profileId && '请上传身份证正面',
-                      validate: {
-                        fileSize: files => !files?.[0] || files[0].size < 10 * 1024 * 1024 || '图片大小不能超过10MB'
+                <div>
+                  <ImageUpload 
+                    label="身份证正面" 
+                    bucketPath={`id-front/${user.id}`}
+                    defaultUrl={watch('id_card_front_url')}
+                    onUploadComplete={(url) => {
+                      setValue('id_card_front_url', url, { shouldDirty: true, shouldValidate: true })
+                      // Clear the file input error if any
+                      if (url) {
+                        setValue('idCardFront', 'uploaded') // Mock value to satisfy required
                       }
-                    })} 
+                    }}
+                    error={errors.id_card_front_url}
                   />
-                   {watch('id_card_front_url') && <p className="text-xs text-green-600 mt-2 z-10">已上传</p>}
-                   {watch('idCardFront')?.[0]?.name && <p className="text-xs text-gray-600 mt-2 z-10">{watch('idCardFront')[0].name}</p>}
-                   {errors.idCardFront && <p className="text-red-500 text-xs mt-1 z-10">{errors.idCardFront.message}</p>}
+                  {/* Hidden inputs for validation */}
+                  <input type="hidden" {...register('id_card_front_url', { required: '请上传身份证正面' })} />
                 </div>
+
                 {/* ID Back */}
-                 <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                  <label className="block text-sm font-medium text-gray-700 mb-1">身份证反面 <span className="text-red-500">*</span></label>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    {...register('idCardBack', { 
-                      required: !profileId && '请上传身份证反面',
-                      validate: {
-                        fileSize: files => !files?.[0] || files[0].size < 10 * 1024 * 1024 || '图片大小不能超过10MB'
-                      }
-                    })} 
+                <div>
+                   <ImageUpload 
+                    label="身份证反面" 
+                    bucketPath={`id-back/${user.id}`}
+                    defaultUrl={watch('id_card_back_url')}
+                    onUploadComplete={(url) => {
+                      setValue('id_card_back_url', url, { shouldDirty: true, shouldValidate: true })
+                    }}
+                    error={errors.id_card_back_url}
                   />
-                   {watch('id_card_back_url') && <p className="text-xs text-green-600 mt-2 z-10">已上传</p>}
-                   {watch('idCardBack')?.[0]?.name && <p className="text-xs text-gray-600 mt-2 z-10">{watch('idCardBack')[0].name}</p>}
-                   {errors.idCardBack && <p className="text-red-500 text-xs mt-1 z-10">{errors.idCardBack.message}</p>}
+                  <input type="hidden" {...register('id_card_back_url', { required: '请上传身份证反面' })} />
                 </div>
+
                  {/* Photo */}
-                 <div className="relative md:col-span-2 border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                  <label className="block text-sm font-medium text-gray-700 mb-1">一寸白底证件照 <span className="text-red-500">*</span></label>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    {...register('photo', { 
-                      required: !profileId && '请上传证件照',
-                      validate: {
-                        fileSize: files => !files?.[0] || files[0].size < 10 * 1024 * 1024 || '图片大小不能超过10MB'
-                      }
-                    })} 
+                 <div className="md:col-span-2">
+                   <ImageUpload 
+                    label="一寸白底证件照" 
+                    bucketPath={`photos/${user.id}`}
+                    defaultUrl={watch('photo_url')}
+                    onUploadComplete={(url) => {
+                      setValue('photo_url', url, { shouldDirty: true, shouldValidate: true })
+                    }}
+                    error={errors.photo_url}
                   />
-                   {watch('photo_url') && <p className="text-xs text-green-600 mt-2 z-10">已上传</p>}
-                   {watch('photo')?.[0]?.name && <p className="text-xs text-gray-600 mt-2 z-10">{watch('photo')[0].name}</p>}
-                   {errors.photo && <p className="text-red-500 text-xs mt-1 z-10">{errors.photo.message}</p>}
+                  <input type="hidden" {...register('photo_url', { required: '请上传证件照' })} />
                 </div>
               </div>
              </section>
