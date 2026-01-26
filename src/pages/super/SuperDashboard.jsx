@@ -85,6 +85,7 @@ export default function SuperDashboard() {
 
   const [lostData, setLostData] = useState([])
   const [zombieUsers, setZombieUsers] = useState([])
+  const [selectedZombies, setSelectedZombies] = useState(new Set())
   const [showZombieModal, setShowZombieModal] = useState(false)
 
   const fetchAdmins = async () => {
@@ -132,9 +133,55 @@ export default function SuperDashboard() {
       if (error) throw error
 
       setZombieUsers(prev => prev.filter(u => u.user_id !== userId))
+      setSelectedZombies(prev => {
+        const next = new Set(prev)
+        next.delete(userId)
+        return next
+      })
       alert('已删除无效账号')
     } catch (error) {
       alert('删除失败: ' + error.message)
+    }
+  }
+
+  const toggleZombieSelection = (userId) => {
+    setSelectedZombies(prev => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+      } else {
+        next.add(userId)
+      }
+      return next
+    })
+  }
+
+  const toggleAllZombies = () => {
+    if (selectedZombies.size === zombieUsers.length) {
+      setSelectedZombies(new Set())
+    } else {
+      setSelectedZombies(new Set(zombieUsers.map(u => u.user_id)))
+    }
+  }
+
+  const handleBatchDeleteZombies = async () => {
+    const count = selectedZombies.size
+    if (count === 0) return
+
+    if (!window.confirm(`确定要批量删除这 ${count} 个无效账号吗？此操作无法撤销。`)) return
+
+    try {
+      const { error } = await supabaseSuper.rpc('delete_zombie_users_batch', { 
+        target_user_ids: Array.from(selectedZombies) 
+      })
+      
+      if (error) throw error
+
+      setZombieUsers(prev => prev.filter(u => !selectedZombies.has(u.user_id)))
+      setSelectedZombies(new Set())
+      alert(`成功删除 ${count} 个无效账号`)
+    } catch (error) {
+      alert('批量删除失败: ' + error.message)
     }
   }
 
@@ -569,6 +616,14 @@ export default function SuperDashboard() {
               <table className="min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-900/50 sticky top-0">
                   <tr>
+                    <th className="px-6 py-3 text-left">
+                      <input 
+                        type="checkbox" 
+                        checked={zombieUsers.length > 0 && selectedZombies.size === zombieUsers.length}
+                        onChange={toggleAllZombies}
+                        className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">账号 (Email)</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">注册时间</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase">操作</th>
@@ -576,7 +631,15 @@ export default function SuperDashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-700 bg-gray-800">
                   {zombieUsers.map((user) => (
-                    <tr key={user.user_id} className="hover:bg-gray-700/50">
+                    <tr key={user.user_id} className={`hover:bg-gray-700/50 ${selectedZombies.has(user.user_id) ? 'bg-blue-900/10' : ''}`}>
+                      <td className="px-6 py-4">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedZombies.has(user.user_id)}
+                          onChange={() => toggleZombieSelection(user.user_id)}
+                          className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">
                         {user.email}
                       </td>
@@ -595,7 +658,7 @@ export default function SuperDashboard() {
                   ))}
                   {zombieUsers.length === 0 && (
                     <tr>
-                      <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
                         暂无无效账号
                       </td>
                     </tr>
@@ -604,13 +667,29 @@ export default function SuperDashboard() {
               </table>
             </div>
 
-            <div className="p-4 border-t border-gray-700 bg-gray-900/30 text-right">
-              <button
-                onClick={() => setShowZombieModal(false)}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
-              >
-                关闭
-              </button>
+            <div className="p-4 border-t border-gray-700 bg-gray-900/30 flex justify-between items-center">
+              <div className="text-sm text-gray-400">
+                已选 {selectedZombies.size} 个账号
+              </div>
+              <div className="space-x-3">
+                <button
+                  onClick={handleBatchDeleteZombies}
+                  disabled={selectedZombies.size === 0}
+                  className={`px-4 py-2 rounded transition-colors ${
+                    selectedZombies.size > 0 
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  批量删除
+                </button>
+                <button
+                  onClick={() => setShowZombieModal(false)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+                >
+                  关闭
+                </button>
+              </div>
             </div>
           </div>
         </div>
