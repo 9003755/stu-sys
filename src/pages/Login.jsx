@@ -106,9 +106,20 @@ export default function Login() {
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
             无人机培训学员注册系统
           </h1>
-          <p className="mt-4 text-sm text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-100 text-left">
-            💡 学员资料可按照UOM批量上传模板打包下载，无需额外操作直接上传至UOM
-          </p>
+          <div className="mt-4 text-sm text-gray-600 bg-blue-50 p-4 rounded-lg border border-blue-100 text-left space-y-2">
+            <p className="flex items-start">
+              <span className="mr-2">💡</span>
+              <span>学员资料自动按照UOM学员批量上传的格式打包下载，可直接上传UOM无重复工作</span>
+            </p>
+            <p className="flex items-start">
+              <span className="mr-2">📄</span>
+              <span>学员身份证正反面自动合并成pdf文件下载</span>
+            </p>
+            <p className="flex items-start">
+              <span className="mr-2">📱</span>
+              <span>手机端注册需用谷歌浏览器</span>
+            </p>
+          </div>
         </div>
 
         {/* Role Switcher */}
