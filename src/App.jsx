@@ -10,6 +10,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminRegister from './pages/admin/AdminRegister'
 import SuperLogin from './pages/super/SuperLogin'
 import SuperDashboard from './pages/super/SuperDashboard'
+import AllStudents from './pages/super/AllStudents'
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
@@ -70,6 +71,7 @@ function App() {
               {/* Super Admin Routes */}
               <Route path="/super/login" element={<SuperLogin />} />
               <Route path="/super/dashboard" element={<SuperDashboard />} />
+              <Route path="/super/students" element={<AllStudents />} />
             </Routes>
           </SuperAuthProvider>
         </AdminAuthProvider>
