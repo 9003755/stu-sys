@@ -19,10 +19,17 @@ export default function AllStudents() {
       setLoading(true)
       
       // 1. Get all users from auth
-      const { data: { users }, error: usersError } = await supabaseSuper.auth.admin.listUsers({
-        perPage: 1000 // Adjust based on expected volume
+      // Use listUsers() correctly. The response structure might vary by version.
+      // Usually { data: { users: [] }, error } or { data: [], error } for older versions or rpc
+      // But auth.admin.listUsers returns { data: { users: [] }, error } in recent v2
+      
+      const { data, error: usersError } = await supabaseSuper.auth.admin.listUsers({
+        perPage: 1000 
       })
+      
       if (usersError) throw usersError
+      
+      const users = data.users || []
 
       // 2. Get all admins IDs to exclude them
       const { data: admins } = await supabaseSuper.from('admins').select('user_id')
@@ -46,7 +53,7 @@ export default function AllStudents() {
       })
 
       // 5. Assemble data
-      const studentList = users
+      const studentList = (users || [])
         .filter(u => !adminIds.has(u.id))
         .map(u => {
           const enrollInfo = enrollMap.get(u.id) || {}
