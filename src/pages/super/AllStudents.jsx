@@ -44,9 +44,21 @@ export default function AllStudents() {
     setSortConfig({ key, direction })
   }
 
-  const handleDelete = async (studentId, email) => {
-    if (!window.confirm(`⚠️ 警告：确定要强制删除学员 "${email}" 吗？\n\n这将永久删除该学员的所有资料和报名信息，且无法恢复！`)) {
-      return
+  const handleDelete = async (studentId, email, hasProfile) => {
+    // Check if user has profile and show stricter warning
+    if (hasProfile) {
+      if (!window.confirm(`⚠️ 严重警告：该学员 "${email}" 已填写报名资料！\n\n删除操作将永久抹除所有资料和记录，且【无法恢复】。\n\n您确定要继续吗？`)) {
+        return
+      }
+      // Double confirm for safety
+      if (!window.confirm(`再次确认：真的要删除 "${email}" 吗？此操作不可撤销。`)) {
+        return
+      }
+    } else {
+      // Standard warning for users without profile
+      if (!window.confirm(`确认删除学员账号 "${email}" 吗？`)) {
+        return
+      }
     }
 
     try {
@@ -89,8 +101,24 @@ export default function AllStudents() {
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return
 
-    if (!window.confirm(`⚠️ 严重警告：确定要强制删除选中的 ${selectedIds.size} 名学员吗？\n\n这些操作不可逆，所有相关资料和报名信息将被永久删除！`)) {
+    // Find if any selected student has a profile
+    const selectedStudents = students.filter(s => selectedIds.has(s.student_id))
+    const hasProfileCount = selectedStudents.filter(s => s.has_profile).length
+
+    let confirmMsg = `确定要删除选中的 ${selectedIds.size} 名学员吗？`
+    
+    if (hasProfileCount > 0) {
+      confirmMsg = `⚠️ 严重警告：选中的学员中有 ${hasProfileCount} 名已填写报名资料！\n\n批量删除将永久抹除这些资料，且【无法恢复】。\n\n您确定要继续吗？`
+    }
+
+    if (!window.confirm(confirmMsg)) {
       return
+    }
+
+    if (hasProfileCount > 0) {
+      if (!window.confirm(`再次确认：真的要批量删除这些包含资料的学员账号吗？`)) {
+        return
+      }
     }
 
     try {
@@ -504,8 +532,8 @@ export default function AllStudents() {
                         {new Date(student.registered_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleDelete(student.student_id, student.student_email)}
+                          <button
+                          onClick={() => handleDelete(student.student_id, student.student_email, student.has_profile)}
                           className="text-red-400 hover:text-red-300 border border-red-900/50 hover:bg-red-900/20 px-3 py-1 rounded transition-colors"
                         >
                           删除
