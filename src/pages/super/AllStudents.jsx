@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabaseSuper } from '../lib/supabase'
+import { supabaseSuper } from '../../lib/supabase'
 import { Users, Search, Filter, Loader2, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
