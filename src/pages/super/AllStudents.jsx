@@ -3,6 +3,7 @@ import { supabaseSuper } from '../../lib/supabase'
 import { Users, Search, Filter, Loader2, ArrowLeft, Trash2, Eye, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
+import DangerDeleteModal from '../../components/DangerDeleteModal'
 
 export default function AllStudents() {
   const navigate = useNavigate()
@@ -14,6 +15,15 @@ export default function AllStudents() {
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [loadingProfile, setLoadingProfile] = useState(false)
+  
+  // Danger Modal State
+  const [dangerModal, setDangerModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    itemDescription: '',
+    onConfirm: () => {}
+  })
 
   useEffect(() => {
     fetchStudents()
@@ -45,22 +55,27 @@ export default function AllStudents() {
   }
 
   const handleDelete = async (studentId, email, hasProfile) => {
-    // Check if user has profile and show stricter warning
+    // If user has profile, use the Danger Modal
     if (hasProfile) {
-      if (!window.confirm(`⚠️ 严重警告：该学员 "${email}" 已填写报名资料！\n\n删除操作将永久抹除所有资料和记录，且【无法恢复】。\n\n您确定要继续吗？`)) {
-        return
-      }
-      // Double confirm for safety
-      if (!window.confirm(`再次确认：真的要删除 "${email}" 吗？此操作不可撤销。`)) {
-        return
-      }
-    } else {
-      // Standard warning for users without profile
-      if (!window.confirm(`确认删除学员账号 "${email}" 吗？`)) {
-        return
-      }
+      setDangerModal({
+        isOpen: true,
+        title: '正在删除已备案学员',
+        message: '该学员已填写完整的报名资料。删除操作将不可逆转地抹除其账号、个人档案、报名记录及所有上传的证件图片。此操作无法恢复！',
+        itemDescription: email,
+        onConfirm: () => performDelete(studentId)
+      })
+      return
     }
 
+    // Standard warning for users without profile
+    if (!window.confirm(`确认删除学员账号 "${email}" 吗？`)) {
+      return
+    }
+    
+    performDelete(studentId)
+  }
+
+  const performDelete = async (studentId) => {
     try {
       const { error } = await supabaseSuper.rpc('force_delete_student', { target_user_id: studentId })
       if (error) throw error
@@ -71,6 +86,7 @@ export default function AllStudents() {
         next.delete(studentId)
         return next
       })
+      setDangerModal(prev => ({ ...prev, isOpen: false }))
       alert('学员账号及档案已强制删除')
     } catch (error) {
       console.error('Delete error:', error)
@@ -105,22 +121,25 @@ export default function AllStudents() {
     const selectedStudents = students.filter(s => selectedIds.has(s.student_id))
     const hasProfileCount = selectedStudents.filter(s => s.has_profile).length
 
-    let confirmMsg = `确定要删除选中的 ${selectedIds.size} 名学员吗？`
-    
     if (hasProfileCount > 0) {
-      confirmMsg = `⚠️ 严重警告：选中的学员中有 ${hasProfileCount} 名已填写报名资料！\n\n批量删除将永久抹除这些资料，且【无法恢复】。\n\n您确定要继续吗？`
-    }
-
-    if (!window.confirm(confirmMsg)) {
+      setDangerModal({
+        isOpen: true,
+        title: '正在批量删除已备案学员',
+        message: `您选中的学员中有 ${hasProfileCount} 名已填写报名资料。这些学员的档案、报名记录及证件图片将被永久抹除且【无法恢复】。`,
+        itemDescription: `包含 ${selectedIds.size} 名选中用户`,
+        onConfirm: performBatchDelete
+      })
       return
     }
 
-    if (hasProfileCount > 0) {
-      if (!window.confirm(`再次确认：真的要批量删除这些包含资料的学员账号吗？`)) {
-        return
-      }
+    if (!window.confirm(`确定要删除选中的 ${selectedIds.size} 名学员吗？`)) {
+      return
     }
+    
+    performBatchDelete()
+  }
 
+  const performBatchDelete = async () => {
     try {
       setLoading(true)
       const { error } = await supabaseSuper.rpc('force_delete_students_batch', { 
@@ -131,6 +150,7 @@ export default function AllStudents() {
 
       setStudents(prev => prev.filter(s => !selectedIds.has(s.student_id)))
       setSelectedIds(new Set())
+      setDangerModal(prev => ({ ...prev, isOpen: false }))
       alert('批量删除成功')
     } catch (error) {
       console.error('Batch delete error:', error)
@@ -209,6 +229,15 @@ export default function AllStudents() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
+      <DangerDeleteModal 
+        isOpen={dangerModal.isOpen}
+        title={dangerModal.title}
+        message={dangerModal.message}
+        itemDescription={dangerModal.itemDescription}
+        onClose={() => setDangerModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={dangerModal.onConfirm}
+      />
+
       {/* Profile Detail Modal */}
       {selectedProfile && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
