@@ -9,6 +9,7 @@ export default function AllStudents() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState('all') // all, has_profile, no_profile
+  const [sortConfig, setSortConfig] = useState({ key: 'registered_at', direction: 'desc' })
 
   useEffect(() => {
     fetchStudents()
@@ -31,7 +32,40 @@ export default function AllStudents() {
     }
   }
 
-  const filteredStudents = students.filter(student => {
+  const handleSort = (key) => {
+    let direction = 'asc'
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const sortedStudents = [...students].sort((a, b) => {
+    if (!sortConfig.key) return 0
+    
+    let aValue = a[sortConfig.key]
+    let bValue = b[sortConfig.key]
+
+    // Handle boolean for 'has_profile'
+    if (typeof aValue === 'boolean') {
+      aValue = aValue ? 1 : 0
+      bValue = bValue ? 1 : 0
+    }
+    
+    // Handle null/undefined
+    if (!aValue) aValue = ''
+    if (!bValue) bValue = ''
+
+    if (aValue < bValue) {
+      return sortConfig.direction === 'asc' ? -1 : 1
+    }
+    if (aValue > bValue) {
+      return sortConfig.direction === 'asc' ? 1 : -1
+    }
+    return 0
+  })
+
+  const filteredStudents = sortedStudents.filter(student => {
     const matchesSearch = 
       student.student_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,6 +75,13 @@ export default function AllStudents() {
     if (filter === 'no_profile') return matchesSearch && !student.has_profile
     return matchesSearch
   })
+
+  const SortIcon = ({ columnKey }) => {
+    if (sortConfig.key !== columnKey) return <div className="w-4 h-4 ml-1 inline-block opacity-20">↕</div>
+    return sortConfig.direction === 'asc' 
+      ? <span className="ml-1 text-blue-400">↑</span> 
+      : <span className="ml-1 text-blue-400">↓</span>
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
@@ -96,12 +137,42 @@ export default function AllStudents() {
             <table className="min-w-full divide-y divide-gray-700">
               <thead className="bg-gray-750 bg-gray-900/50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">学员账号 (Email)</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">姓名</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">班级</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">所属管理员</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">资料状态</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">注册时间</th>
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white select-none"
+                    onClick={() => handleSort('student_email')}
+                  >
+                    学员账号 (Email) <SortIcon columnKey="student_email" />
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white select-none"
+                    onClick={() => handleSort('student_name')}
+                  >
+                    姓名 <SortIcon columnKey="student_name" />
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white select-none"
+                    onClick={() => handleSort('class_name')}
+                  >
+                    班级 <SortIcon columnKey="class_name" />
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white select-none"
+                    onClick={() => handleSort('admin_name')}
+                  >
+                    所属管理员 <SortIcon columnKey="admin_name" />
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white select-none"
+                    onClick={() => handleSort('has_profile')}
+                  >
+                    资料状态 <SortIcon columnKey="has_profile" />
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white select-none"
+                    onClick={() => handleSort('registered_at')}
+                  >
+                    注册时间 <SortIcon columnKey="registered_at" />
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-gray-800 divide-y divide-gray-700">
