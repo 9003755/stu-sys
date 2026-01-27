@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabaseSuper } from '../../lib/supabase'
-import { Users, Search, Filter, Loader2, ArrowLeft } from 'lucide-react'
+import { Users, Search, Filter, Loader2, ArrowLeft, Trash2, Eye, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { jsPDF } from 'jspdf'
 
 export default function AllStudents() {
   const navigate = useNavigate()
@@ -10,6 +11,9 @@ export default function AllStudents() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState('all') // all, has_profile, no_profile
   const [sortConfig, setSortConfig] = useState({ key: 'registered_at', direction: 'desc' })
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [selectedProfile, setSelectedProfile] = useState(null)
+  const [loadingProfile, setLoadingProfile] = useState(false)
 
   useEffect(() => {
     fetchStudents()
@@ -50,10 +54,85 @@ export default function AllStudents() {
       if (error) throw error
 
       setStudents(prev => prev.filter(s => s.student_id !== studentId))
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        next.delete(studentId)
+        return next
+      })
       alert('学员账号及档案已强制删除')
     } catch (error) {
       console.error('Delete error:', error)
       alert('删除失败: ' + error.message)
+    }
+  }
+
+  const toggleSelection = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredStudents.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredStudents.map(s => s.student_id)))
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    if (!window.confirm(`⚠️ 严重警告：确定要强制删除选中的 ${selectedIds.size} 名学员吗？\n\n这些操作不可逆，所有相关资料和报名信息将被永久删除！`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      const { error } = await supabaseSuper.rpc('force_delete_students_batch', { 
+        target_user_ids: Array.from(selectedIds) 
+      })
+      
+      if (error) throw error
+
+      setStudents(prev => prev.filter(s => !selectedIds.has(s.student_id)))
+      setSelectedIds(new Set())
+      alert('批量删除成功')
+    } catch (error) {
+      console.error('Batch delete error:', error)
+      alert('批量删除失败: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const viewDetails = async (studentId) => {
+    try {
+      setLoadingProfile(true)
+      const { data, error } = await supabaseSuper
+        .from('profiles')
+        .select('*')
+        .eq('user_id', studentId)
+        .single()
+
+      if (error) throw error
+      if (!data) {
+        alert('该学员暂无详细资料')
+        return
+      }
+
+      setSelectedProfile(data)
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+      alert('无法加载学员资料')
+    } finally {
+      setLoadingProfile(false)
     }
   }
 
@@ -102,6 +181,155 @@ export default function AllStudents() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
+      {/* Profile Detail Modal */}
+      {selectedProfile && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto relative border border-gray-700">
+            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center z-10">
+              <h3 className="text-xl font-bold text-white">学员详细资料</h3>
+              <button 
+                onClick={() => setSelectedProfile(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-8 text-gray-300">
+              {/* Basic Info */}
+              <section>
+                <h4 className="text-lg font-bold text-blue-400 border-l-4 border-blue-500 pl-3 mb-4">基本信息</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <span className="text-gray-500 text-sm block">姓名</span>
+                    <span className="font-medium text-white">{selectedProfile.real_name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">性别</span>
+                    <span className="font-medium text-white">{selectedProfile.gender}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">出生日期</span>
+                    <span className="font-medium text-white">{selectedProfile.birth_date}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">国籍</span>
+                    <span className="font-medium text-white">{selectedProfile.nationality}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">民族</span>
+                    <span className="font-medium text-white">{selectedProfile.ethnicity}</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* ID Info */}
+              <section>
+                <h4 className="text-lg font-bold text-blue-400 border-l-4 border-blue-500 pl-3 mb-4">证件信息</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <span className="text-gray-500 text-sm block">证件类型</span>
+                    <span className="font-medium text-white">{selectedProfile.id_type}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">证件号码</span>
+                    <span className="font-medium text-white">{selectedProfile.id_number}</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Contact Info */}
+              <section>
+                <h4 className="text-lg font-bold text-blue-400 border-l-4 border-blue-500 pl-3 mb-4">联系方式</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <span className="text-gray-500 text-sm block">联系电话</span>
+                    <span className="font-medium text-white">{selectedProfile.contact_phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">邮箱</span>
+                    <span className="font-medium text-white">{selectedProfile.email_contact}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">邮政编码</span>
+                    <span className="font-medium text-white">{selectedProfile.postal_code}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block">所在地区</span>
+                    <span className="font-medium text-white">{selectedProfile.region}</span>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="text-gray-500 text-sm block">详细地址</span>
+                    <span className="font-medium text-white">{selectedProfile.address}</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Images */}
+              <section>
+                <h4 className="text-lg font-bold text-blue-400 border-l-4 border-blue-500 pl-3 mb-4">证件图片</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <span className="text-gray-500 text-sm block mb-2">证件照</span>
+                    {selectedProfile.photo_url ? (
+                      <div className="border border-gray-600 rounded-lg overflow-hidden h-48 w-36 bg-gray-900 flex items-center justify-center">
+                        <img 
+                          src={selectedProfile.photo_url} 
+                          alt="证件照" 
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(selectedProfile.photo_url, '_blank')}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-48 w-36 bg-gray-800 rounded flex items-center justify-center text-gray-500 text-sm border border-gray-700">未上传</div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block mb-2">身份证正面</span>
+                    {selectedProfile.id_card_front_url ? (
+                      <div className="border border-gray-600 rounded-lg overflow-hidden h-48 w-full bg-gray-900 flex items-center justify-center">
+                        <img 
+                          src={selectedProfile.id_card_front_url} 
+                          alt="身份证正面" 
+                          className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(selectedProfile.id_card_front_url, '_blank')}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-48 w-full bg-gray-800 rounded flex items-center justify-center text-gray-500 text-sm border border-gray-700">未上传</div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm block mb-2">身份证反面</span>
+                    {selectedProfile.id_card_back_url ? (
+                      <div className="border border-gray-600 rounded-lg overflow-hidden h-48 w-full bg-gray-900 flex items-center justify-center">
+                        <img 
+                          src={selectedProfile.id_card_back_url} 
+                          alt="身份证反面" 
+                          className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(selectedProfile.id_card_back_url, '_blank')}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-48 w-full bg-gray-800 rounded flex items-center justify-center text-gray-500 text-sm border border-gray-700">未上传</div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </div>
+            
+            <div className="border-t border-gray-700 px-6 py-4 bg-gray-800 flex justify-end">
+              <button 
+                onClick={() => setSelectedProfile(null)}
+                className="bg-gray-700 border border-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-600 font-medium transition-colors"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -121,7 +349,17 @@ export default function AllStudents() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+            {selectedIds.size > 0 && (
+              <button
+                onClick={handleBatchDelete}
+                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg mr-2"
+              >
+                <Trash2 size={16} className="mr-2" />
+                批量删除 ({selectedIds.size})
+              </button>
+            )}
+            
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
               <input
@@ -154,6 +392,14 @@ export default function AllStudents() {
             <table className="min-w-full divide-y divide-gray-700">
               <thead className="bg-gray-750 bg-gray-900/50">
                 <tr>
+                  <th className="px-6 py-4 text-left">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900"
+                      checked={selectedIds.size > 0 && selectedIds.size === filteredStudents.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th 
                     className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white select-none"
                     onClick={() => handleSort('student_email')}
@@ -214,8 +460,25 @@ export default function AllStudents() {
                 ) : (
                   filteredStudents.map((student) => (
                     <tr key={student.student_id} className="hover:bg-gray-700/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900"
+                          checked={selectedIds.has(student.student_id)}
+                          onChange={() => toggleSelection(student.student_id)}
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">
-                        {student.student_email}
+                        <div className="flex items-center space-x-2">
+                          <span>{student.student_email}</span>
+                          <button 
+                            onClick={() => viewDetails(student.student_id)}
+                            className="text-gray-400 hover:text-blue-400 transition-colors p-1"
+                            title="查看详细资料"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
                         {student.student_name || '-'}
