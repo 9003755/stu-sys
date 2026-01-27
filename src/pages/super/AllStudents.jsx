@@ -18,62 +18,14 @@ export default function AllStudents() {
     try {
       setLoading(true)
       
-      // 1. Get all users from auth
-      // Use listUsers() correctly. The response structure might vary by version.
-      // Usually { data: { users: [] }, error } or { data: [], error } for older versions or rpc
-      // But auth.admin.listUsers returns { data: { users: [] }, error } in recent v2
+      const { data, error } = await supabaseSuper.rpc('get_all_students_overview')
       
-      const { data, error: usersError } = await supabaseSuper.auth.admin.listUsers({
-        perPage: 1000 
-      })
-      
-      if (usersError) throw usersError
-      
-      const users = data.users || []
-
-      // 2. Get all admins IDs to exclude them
-      const { data: admins } = await supabaseSuper.from('admins').select('user_id')
-      const adminIds = new Set(admins?.map(a => a.user_id))
-
-      // 3. Get all profiles
-      const { data: profiles } = await supabaseSuper.from('profiles').select('user_id, real_name')
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.real_name]))
-
-      // 4. Get enrollment info
-      const { data: enrollments } = await supabaseSuper
-        .from('enrollments')
-        .select('user_id, classes(name, admins(full_name))')
-      
-      const enrollMap = new Map()
-      enrollments?.forEach(e => {
-        enrollMap.set(e.user_id, {
-          className: e.classes?.name,
-          adminName: e.classes?.admins?.full_name
-        })
-      })
-
-      // 5. Assemble data
-      const studentList = (users || [])
-        .filter(u => !adminIds.has(u.id))
-        .map(u => {
-          const enrollInfo = enrollMap.get(u.id) || {}
-          return {
-            id: u.id,
-            email: u.email,
-            name: profileMap.get(u.id),
-            has_profile: profileMap.has(u.id),
-            class_name: enrollInfo.className,
-            admin_name: enrollInfo.adminName,
-            registered_at: u.created_at
-          }
-        })
-        .sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at))
-
-      setStudents(studentList)
+      if (error) throw error
+      setStudents(data || [])
 
     } catch (error) {
       console.error('Error fetching students:', error)
-      alert('加载学员数据失败')
+      alert('加载学员数据失败: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -81,8 +33,8 @@ export default function AllStudents() {
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
-      student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.student_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.class_name?.toLowerCase().includes(searchTerm.toLowerCase())
     
     if (filter === 'has_profile') return matchesSearch && student.has_profile
@@ -170,12 +122,12 @@ export default function AllStudents() {
                   </tr>
                 ) : (
                   filteredStudents.map((student) => (
-                    <tr key={student.id} className="hover:bg-gray-700/50 transition-colors">
+                    <tr key={student.student_id} className="hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">
-                        {student.email}
+                        {student.student_email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
-                        {student.name || '-'}
+                        {student.student_name || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-400">
                         {student.class_name || <span className="text-gray-600 italic">未分班</span>}
