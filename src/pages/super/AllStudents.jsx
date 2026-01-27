@@ -40,6 +40,23 @@ export default function AllStudents() {
     setSortConfig({ key, direction })
   }
 
+  const handleDelete = async (studentId, email) => {
+    if (!window.confirm(`⚠️ 警告：确定要强制删除学员 "${email}" 吗？\n\n这将永久删除该学员的所有资料和报名信息，且无法恢复！`)) {
+      return
+    }
+
+    try {
+      const { error } = await supabaseSuper.rpc('force_delete_student', { target_user_id: studentId })
+      if (error) throw error
+
+      setStudents(prev => prev.filter(s => s.student_id !== studentId))
+      alert('学员账号及档案已强制删除')
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('删除失败: ' + error.message)
+    }
+  }
+
   const sortedStudents = [...students].sort((a, b) => {
     if (!sortConfig.key) return 0
     
@@ -173,6 +190,9 @@ export default function AllStudents() {
                   >
                     注册时间 <SortIcon columnKey="registered_at" />
                   </th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-gray-800 divide-y divide-gray-700">
@@ -219,6 +239,14 @@ export default function AllStudents() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(student.registered_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleDelete(student.student_id, student.student_email)}
+                          className="text-red-400 hover:text-red-300 border border-red-900/50 hover:bg-red-900/20 px-3 py-1 rounded transition-colors"
+                        >
+                          删除
+                        </button>
                       </td>
                     </tr>
                   ))
