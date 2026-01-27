@@ -259,7 +259,8 @@ export default function ClassManagement({ onViewStudents }) {
               <X size={24} />
             </button>
             <h3 className="text-xl font-bold mb-2">{currentClass.name}</h3>
-            <p className="text-gray-500 text-sm mb-6">扫码报名此班级</p>
+            <p className="text-gray-500 text-sm mb-2">扫码报名此班级</p>
+            <p className="text-red-500 text-sm font-bold mb-6">手机端仅支持谷歌浏览器</p>
             
             <div className="flex justify-center mb-6">
               <QRCodeSVG 
