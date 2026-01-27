@@ -175,7 +175,7 @@ export default function ClassManagement({ onViewStudents }) {
                     {cls.description}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                    <button onClick={() => openQR(cls)} className="text-blue-600 hover:text-blue-900" title="查看二维码">
+                    <button onClick={() => openQR(cls)} className="text-blue-600 hover:text-blue-900" title="班级报名入口">
                       <Share2 size={18} />
                     </button>
                     <button onClick={() => onViewStudents && onViewStudents(cls.id)} className="text-indigo-600 hover:text-indigo-900" title="查看学员">
