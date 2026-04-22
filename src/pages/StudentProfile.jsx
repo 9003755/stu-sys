@@ -28,33 +28,32 @@ const getFileExtension = (file) => {
 }
 
 const shouldTryCompression = (file) => {
-  if (isMobileBrowser()) return false
-  if (file.size <= 1024 * 1024) return false
+  if (file.size <= 512 * 1024) return false
   if (!file.type?.startsWith('image/')) return false
   if (/heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name || '')) return false
 
   return (
     typeof window !== 'undefined' &&
-    typeof FileReader !== 'undefined' &&
     typeof Image !== 'undefined' &&
     typeof document !== 'undefined' &&
-    typeof HTMLCanvasElement !== 'undefined'
+    typeof HTMLCanvasElement !== 'undefined' &&
+    typeof URL !== 'undefined' &&
+    typeof URL.createObjectURL === 'function'
   )
 }
 
-// Helper: Lightweight image compression using Canvas
+// Use object URLs instead of base64 to reduce memory pressure on mobile browsers.
 const compressImage = (file) => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = (event) => {
-      const img = new Image()
-      img.src = event.target.result
-      img.onload = () => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      try {
         const canvas = document.createElement('canvas')
-        // Max dimensions
-        const MAX_WIDTH = 1200
-        const MAX_HEIGHT = 1200
+        const mobile = isMobileBrowser()
+        const MAX_WIDTH = mobile ? 1280 : 1600
+        const MAX_HEIGHT = mobile ? 1280 : 1600
+        const QUALITY = mobile ? 0.68 : 0.75
         let width = img.width
         let height = img.height
 
@@ -77,6 +76,7 @@ const compressImage = (file) => {
 
         // Compress to JPEG with 0.7 quality
         canvas.toBlob((blob) => {
+          URL.revokeObjectURL(objectUrl)
           if (!blob) {
             reject(new Error('Canvas compression failed'))
             return
@@ -99,11 +99,17 @@ const compressImage = (file) => {
               contentType: 'image/jpeg'
             })
           }
-        }, 'image/jpeg', 0.7)
+        }, 'image/jpeg', QUALITY)
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl)
+        reject(error)
       }
-      img.onerror = (err) => reject(new Error('Image load failed'))
     }
-    reader.onerror = (err) => reject(new Error('File read failed'))
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Image load failed'))
+    }
+    img.src = objectUrl
   })
 }
 
@@ -161,8 +167,11 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
 
     try {
       console.log(`Original size: ${file.size / 1024 / 1024} MB`)
+      // Let the native picker fully close before starting heavy work.
+      await new Promise((resolve) => setTimeout(resolve, 80))
 
       const uploadPayload = await getUploadPayload(file)
+      console.log(`Upload size: ${uploadPayload.file.size / 1024 / 1024} MB`)
 
       // 2. Upload
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${uploadPayload.fileExt}`
