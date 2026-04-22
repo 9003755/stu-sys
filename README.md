@@ -1,16 +1,45 @@
-# React + Vite
+# 学员报名系统
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+这是一个用于培训机构学员报名、资料采集、班级管理与后台管理的 Web 系统。
 
-Currently, two official plugins are available:
+技术栈概览：
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 前端：React + Vite
+- 后端：Supabase
+- 部署：Netlify
 
-## React Compiler
+## 常用入口
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- 项目总览与历史问题总结：[PROJECT_SUMMARY.md](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/PROJECT_SUMMARY.md)
+- 本次移动端上传修复复盘：[UPLOAD_FIX_RETROSPECT_20260422.md](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/docs/UPLOAD_FIX_RETROSPECT_20260422.md)
 
-## Expanding the ESLint configuration
+## 本地开发
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+安装依赖：
+
+```bash
+npm install
+```
+
+启动开发环境：
+
+```bash
+npm run dev
+```
+
+构建生产版本：
+
+```bash
+npm run build
+```
+
+## 重点经验
+
+- 报名页与资料上传属于移动端高敏感链路，修改后应优先回归微信内置浏览器、三星浏览器和安卓 Chrome。
+- 如果移动端上传再次出现“选图后回到上传前状态”，优先查看上传复盘文档，不要直接从压缩参数开始排查。
+- 调试上传问题时，可在页面 URL 后加 `?uploadDebug=1` 打开调试日志面板。
+
+## 文档维护
+
+- 项目级总结：`PROJECT_SUMMARY.md`
+- 上传问题专项复盘：`docs/UPLOAD_FIX_RETROSPECT_20260422.md`
