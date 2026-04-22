@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useId } from 'react'
+import { useState, useEffect, useMemo, useId, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -54,6 +54,49 @@ const setUploadSession = (userId, payload) => {
 const clearUploadSession = (userId) => {
   if (!userId || typeof sessionStorage === 'undefined') return
   sessionStorage.removeItem(getUploadSessionKey(userId))
+}
+
+const DEBUG_LOG_KEY = 'student_profile_debug_log'
+const DEBUG_SESSION_KEY = 'student_profile_debug_session_id'
+
+const safeNow = () => new Date().toISOString()
+
+const getDebugSessionId = () => {
+  if (typeof sessionStorage === 'undefined') return `no-session-${Date.now()}`
+
+  let sessionId = sessionStorage.getItem(DEBUG_SESSION_KEY)
+  if (!sessionId) {
+    sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    sessionStorage.setItem(DEBUG_SESSION_KEY, sessionId)
+  }
+
+  return sessionId
+}
+
+const readDebugLogs = () => {
+  if (typeof localStorage === 'undefined') return []
+  const parsed = safeParseJSON(localStorage.getItem(DEBUG_LOG_KEY))
+  return Array.isArray(parsed) ? parsed : []
+}
+
+const appendDebugLog = (entry) => {
+  if (typeof localStorage === 'undefined') return
+  const logs = readDebugLogs()
+  const nextLogs = [
+    ...logs,
+    {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      at: safeNow(),
+      ...entry,
+    }
+  ].slice(-120)
+
+  localStorage.setItem(DEBUG_LOG_KEY, JSON.stringify(nextLogs))
+}
+
+const clearDebugLogs = () => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.removeItem(DEBUG_LOG_KEY)
 }
 
 const getFileExtension = (file) => {
@@ -206,12 +249,28 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
       label,
       status: 'picking'
     })
+    appendDebugLog({
+      scope: 'upload',
+      action: 'picker-click',
+      label,
+      fieldName,
+      browser: getBrowserLabel(),
+      visibility: typeof document !== 'undefined' ? document.visibilityState : 'unknown'
+    })
   }
 
   const handleFileChange = async (event) => {
     const input = event.target
     const file = input.files?.[0]
-    if (!file) return
+    if (!file) {
+      appendDebugLog({
+        scope: 'upload',
+        action: 'change-empty',
+        label,
+        fieldName
+      })
+      return
+    }
 
     setUploading(true)
     setUploadError(null)
@@ -219,6 +278,15 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
       fieldName,
       label,
       status: 'selected'
+    })
+    appendDebugLog({
+      scope: 'upload',
+      action: 'change-file',
+      label,
+      fieldName,
+      fileName: file.name,
+      fileType: file.type || 'unknown',
+      fileSize: file.size
     })
 
     try {
@@ -228,6 +296,14 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
 
       const uploadPayload = await getUploadPayload(file)
       console.log(`Upload size: ${uploadPayload.file.size / 1024 / 1024} MB`)
+      appendDebugLog({
+        scope: 'upload',
+        action: 'upload-start',
+        label,
+        fieldName,
+        uploadType: uploadPayload.contentType,
+        uploadSize: uploadPayload.file.size
+      })
 
       // 2. Upload
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${uploadPayload.fileExt}`
@@ -252,6 +328,13 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
       // 3. Callback
       onUploadComplete(publicUrl)
       clearUploadSession(userId)
+      appendDebugLog({
+        scope: 'upload',
+        action: 'upload-success',
+        label,
+        fieldName,
+        filePath
+      })
 
     } catch (err) {
       console.error('Upload failed:', err)
@@ -261,6 +344,13 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
         fieldName,
         label,
         status: 'failed',
+        message: err.message || '上传失败'
+      })
+      appendDebugLog({
+        scope: 'upload',
+        action: 'upload-error',
+        label,
+        fieldName,
         message: err.message || '上传失败'
       })
     } finally {
@@ -476,6 +566,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
 export default function StudentProfile({ classId, onSuccess }) {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const pageInstanceIdRef = useRef(`page-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
   const [classInfo, setClassInfo] = useState(null)
   const { register, handleSubmit, setValue, formState: { errors }, watch } = useForm({
     defaultValues: {
@@ -494,10 +585,15 @@ export default function StudentProfile({ classId, onSuccess }) {
   const [addressesLoaded, setAddressesLoaded] = useState(false)
   const [addressesLoading, setAddressesLoading] = useState(false)
   const [browserLabel] = useState(() => getBrowserLabel())
+  const [debugLogs, setDebugLogs] = useState(() => readDebugLogs())
   
   // Search state for address
   const [showAddressList, setShowAddressList] = useState(false)
   const [addressSearch, setAddressSearch] = useState('')
+
+  const syncDebugLogs = () => {
+    setDebugLogs(readDebugLogs())
+  }
 
   const loadAddresses = async () => {
     if (addressesLoaded || addressesLoading) return
@@ -603,6 +699,85 @@ export default function StudentProfile({ classId, onSuccess }) {
     getClassInfo()
     restoreUploadSession()
   }, [user, setValue, classId, browserLabel])
+
+  useEffect(() => {
+    appendDebugLog({
+      scope: 'page',
+      action: 'mount',
+      pageInstanceId: pageInstanceIdRef.current,
+      debugSessionId: getDebugSessionId(),
+      browser: browserLabel,
+      href: typeof window !== 'undefined' ? window.location.href : '',
+      visibility: typeof document !== 'undefined' ? document.visibilityState : 'unknown'
+    })
+    syncDebugLogs()
+
+    const handlePageShow = (event) => {
+      appendDebugLog({
+        scope: 'lifecycle',
+        action: 'pageshow',
+        pageInstanceId: pageInstanceIdRef.current,
+        persisted: Boolean(event.persisted)
+      })
+      syncDebugLogs()
+    }
+
+    const handlePageHide = (event) => {
+      appendDebugLog({
+        scope: 'lifecycle',
+        action: 'pagehide',
+        pageInstanceId: pageInstanceIdRef.current,
+        persisted: Boolean(event.persisted)
+      })
+      syncDebugLogs()
+    }
+
+    const handleBeforeUnload = () => {
+      appendDebugLog({
+        scope: 'lifecycle',
+        action: 'beforeunload',
+        pageInstanceId: pageInstanceIdRef.current
+      })
+    }
+
+    const handleVisibilityChange = () => {
+      appendDebugLog({
+        scope: 'lifecycle',
+        action: 'visibilitychange',
+        pageInstanceId: pageInstanceIdRef.current,
+        visibility: document.visibilityState
+      })
+      syncDebugLogs()
+    }
+
+    const handleFocus = () => {
+      appendDebugLog({
+        scope: 'lifecycle',
+        action: 'focus',
+        pageInstanceId: pageInstanceIdRef.current
+      })
+      syncDebugLogs()
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      appendDebugLog({
+        scope: 'page',
+        action: 'unmount',
+        pageInstanceId: pageInstanceIdRef.current
+      })
+      window.removeEventListener('pageshow', handlePageShow)
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [browserLabel])
 
   // 自动保存草稿
   useEffect(() => {
@@ -794,11 +969,66 @@ export default function StudentProfile({ classId, onSuccess }) {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Debug Info for Mobile */}
           <div className="px-8 pt-4 pb-0">
-             <details className="text-xs text-gray-300">
+             <details className="text-xs text-gray-500">
                <summary>调试日志</summary>
-               <pre className="mt-2 p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-32">
-                 {`User: ${user?.email}\nUA: ${navigator.userAgent}`}
-               </pre>
+               <div className="mt-2 space-y-2">
+                 <pre className="p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-32 whitespace-pre-wrap break-all">
+{`User: ${user?.email}
+Browser: ${browserLabel}
+PageInstance: ${pageInstanceIdRef.current}
+DebugSession: ${getDebugSessionId()}
+UA: ${navigator.userAgent}`}
+                 </pre>
+                 <div className="flex gap-2">
+                   <button
+                     type="button"
+                     onClick={() => {
+                       syncDebugLogs()
+                       alert('已刷新调试日志')
+                     }}
+                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                   >
+                     刷新日志
+                   </button>
+                   <button
+                     type="button"
+                     onClick={async () => {
+                       const content = readDebugLogs()
+                         .map((item) => JSON.stringify(item))
+                         .join('\n')
+                       try {
+                         if (navigator.clipboard?.writeText) {
+                           await navigator.clipboard.writeText(content)
+                           alert('调试日志已复制')
+                         } else {
+                           alert('当前浏览器不支持复制，请手动截图日志')
+                         }
+                       } catch (error) {
+                         alert('复制失败，请手动截图日志')
+                       }
+                     }}
+                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                   >
+                     复制日志
+                   </button>
+                   <button
+                     type="button"
+                     onClick={() => {
+                       clearDebugLogs()
+                       syncDebugLogs()
+                       alert('调试日志已清空')
+                     }}
+                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                   >
+                     清空日志
+                   </button>
+                 </div>
+                 <pre className="p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-64 whitespace-pre-wrap break-all">
+{debugLogs.length
+  ? debugLogs.map((item) => JSON.stringify(item)).join('\n')
+  : '暂无调试日志'}
+                 </pre>
+               </div>
              </details>
           </div>
           <form onSubmit={handleSubmit(onSubmit, onError)} className="p-8 space-y-10">
