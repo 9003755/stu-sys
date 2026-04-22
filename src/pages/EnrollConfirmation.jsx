@@ -5,15 +5,46 @@ import { useAuth } from '../contexts/AuthContext'
 import { CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
 import StudentProfile from './StudentProfile'
 
+const getEnrollCacheKey = (classId, userId = 'guest') => `enroll_confirmation_cache_${classId}_${userId}`
+
+const readEnrollCache = (classId, userId) => {
+  if (typeof sessionStorage === 'undefined') return null
+
+  try {
+    const raw = sessionStorage.getItem(getEnrollCacheKey(classId, userId))
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+const writeEnrollCache = (classId, userId, payload) => {
+  if (!classId || !userId || typeof sessionStorage === 'undefined') return
+
+  sessionStorage.setItem(
+    getEnrollCacheKey(classId, userId),
+    JSON.stringify({
+      ...payload,
+      updatedAt: Date.now()
+    })
+  )
+}
+
+const clearEnrollCache = (classId, userId) => {
+  if (!classId || !userId || typeof sessionStorage === 'undefined') return
+  sessionStorage.removeItem(getEnrollCacheKey(classId, userId))
+}
+
 export default function EnrollConfirmation() {
   const { classId } = useParams()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const cachedState = readEnrollCache(classId, user?.id)
   
-  const [classInfo, setClassInfo] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [enrollStatus, setEnrollStatus] = useState('checking') // checking, can_enroll, already_enrolled, success, error, no_profile
-  const [profileId, setProfileId] = useState(null)
+  const [classInfo, setClassInfo] = useState(cachedState?.classInfo ?? null)
+  const [loading, setLoading] = useState(!cachedState)
+  const [enrollStatus, setEnrollStatus] = useState(cachedState?.enrollStatus ?? 'checking') // checking, can_enroll, already_enrolled, success, error, no_profile
+  const [profileId, setProfileId] = useState(cachedState?.profileId ?? null)
   const [msg, setMsg] = useState('')
 
   // Auth State
@@ -26,7 +57,9 @@ export default function EnrollConfirmation() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        setLoading(true)
+        if (!cachedState) {
+          setLoading(true)
+        }
         
         // 1. Get Class Info
         const { data: cls, error: clsError } = await supabase
@@ -39,6 +72,7 @@ export default function EnrollConfirmation() {
         setClassInfo(cls)
 
         if (!user) {
+          clearEnrollCache(classId, 'guest')
           setLoading(false)
           return
         }
@@ -53,6 +87,11 @@ export default function EnrollConfirmation() {
         if (!profile) {
           // Changed: If no profile, we stay in 'no_profile' state which will render the form
           setEnrollStatus('no_profile')
+          writeEnrollCache(classId, user.id, {
+            classInfo: cls,
+            enrollStatus: 'no_profile',
+            profileId: null
+          })
           setLoading(false)
           return
         }
@@ -68,8 +107,18 @@ export default function EnrollConfirmation() {
 
         if (existing) {
           setEnrollStatus('already_enrolled')
+          writeEnrollCache(classId, user.id, {
+            classInfo: cls,
+            enrollStatus: 'already_enrolled',
+            profileId: profile.id
+          })
         } else {
           setEnrollStatus('ready_to_enroll')
+          writeEnrollCache(classId, user.id, {
+            classInfo: cls,
+            enrollStatus: 'ready_to_enroll',
+            profileId: profile.id
+          })
         }
 
       } catch (error) {
@@ -100,6 +149,11 @@ export default function EnrollConfirmation() {
       if (error) throw error
       
       setEnrollStatus('success')
+      writeEnrollCache(classId, user.id, {
+        classInfo,
+        enrollStatus: 'success',
+        profileId
+      })
     } catch (error) {
       console.error('Enroll error:', error)
       setMsg('报名失败: ' + error.message)
@@ -223,6 +277,13 @@ export default function EnrollConfirmation() {
   const handleProfileSuccess = () => {
     setLoading(true)
     setEnrollStatus('success') // Directly set success status to show success view
+    if (user) {
+      writeEnrollCache(classId, user.id, {
+        classInfo,
+        enrollStatus: 'success',
+        profileId
+      })
+    }
     setLoading(false)
   }
 
@@ -237,6 +298,7 @@ export default function EnrollConfirmation() {
       // 1. Sign out from Supabase (Student client)
       // This will only clear the student session from localStorage
       await signOut()
+      clearEnrollCache(classId, user?.id)
       
       // 2. Force reload to clear React state
       window.location.reload()

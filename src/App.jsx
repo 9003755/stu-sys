@@ -3,11 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AdminAuthProvider } from './contexts/AdminAuthContext'
 import { SuperAuthProvider } from './contexts/SuperAuthContext'
+import StudentProfile from './pages/StudentProfile'
+import EnrollConfirmation from './pages/EnrollConfirmation'
 
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
-const StudentProfile = lazy(() => import('./pages/StudentProfile'))
-const EnrollConfirmation = lazy(() => import('./pages/EnrollConfirmation'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const AdminRegister = lazy(() => import('./pages/admin/AdminRegister'))
 const SuperLogin = lazy(() => import('./pages/super/SuperLogin'))

@@ -7,6 +7,32 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
+const getProjectRef = () => {
+  try {
+    return new URL(supabaseUrl).hostname.split('.')[0]
+  } catch {
+    return 'student-system'
+  }
+}
+
+export const studentAuthStorageKey = `sb-${getProjectRef()}-auth-token`
+
+export const getStoredStudentSession = () => {
+  if (typeof sessionStorage === 'undefined') return null
+
+  try {
+    const raw = sessionStorage.getItem(studentAuthStorageKey)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+export const getStoredStudentUser = () => {
+  const session = getStoredStudentSession()
+  return session?.user ?? session?.currentSession?.user ?? session?.session?.user ?? null
+}
+
 // Default client for Students (uses default storage key: sb-<project-ref>-auth-token)
 // Modified: Set persistSession to false so closing tab/window clears session (session only in memory)
 // OR use sessionStorage instead of localStorage. Supabase default uses localStorage.
@@ -16,6 +42,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+    storageKey: studentAuthStorageKey,
     storage: sessionStorage, // Use sessionStorage so data is cleared when tab/browser is closed
     autoRefreshToken: true,
     persistSession: true,

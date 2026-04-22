@@ -1,13 +1,14 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { getStoredStudentUser, supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
 
 export const useAuth = () => useContext(AuthContext)
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const initialStoredUser = useMemo(() => getStoredStudentUser(), [])
+  const [user, setUser] = useState(initialStoredUser)
+  const [loading, setLoading] = useState(!initialStoredUser)
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -45,7 +46,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, signUp, signIn, signOut, loading }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   )
 }
