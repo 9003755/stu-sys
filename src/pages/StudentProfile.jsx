@@ -13,6 +13,49 @@ const isMobileBrowser = () => {
   return /Android|iPhone|iPad|iPod|HarmonyOS|Mobile/i.test(navigator.userAgent)
 }
 
+const isWeChatBrowser = () => {
+  if (typeof navigator === 'undefined') return false
+  return /MicroMessenger/i.test(navigator.userAgent)
+}
+
+const isSamsungBrowser = () => {
+  if (typeof navigator === 'undefined') return false
+  return /SamsungBrowser/i.test(navigator.userAgent)
+}
+
+const getBrowserLabel = () => {
+  if (isWeChatBrowser()) return '微信内置浏览器'
+  if (isSamsungBrowser()) return '三星浏览器'
+  if (isMobileBrowser()) return '当前手机浏览器'
+  return '当前浏览器'
+}
+
+const safeParseJSON = (value) => {
+  try {
+    return value ? JSON.parse(value) : null
+  } catch {
+    return null
+  }
+}
+
+const getUploadSessionKey = (userId) => `student_profile_upload_session_${userId}`
+
+const setUploadSession = (userId, payload) => {
+  if (!userId || typeof sessionStorage === 'undefined') return
+  sessionStorage.setItem(
+    getUploadSessionKey(userId),
+    JSON.stringify({
+      ...payload,
+      updatedAt: Date.now(),
+    })
+  )
+}
+
+const clearUploadSession = (userId) => {
+  if (!userId || typeof sessionStorage === 'undefined') return
+  sessionStorage.removeItem(getUploadSessionKey(userId))
+}
+
 const getFileExtension = (file) => {
   const nameExt = file.name?.split('.').pop()?.toLowerCase()
   if (nameExt) {
@@ -146,7 +189,7 @@ const SectionTitle = ({ title }) => (
   </div>
 )
 
-const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error }) => {
+const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, userId, fieldName }) => {
   const inputId = useId()
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(defaultUrl)
@@ -157,6 +200,14 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
     if (defaultUrl) setPreviewUrl(defaultUrl)
   }, [defaultUrl])
 
+  const markPickerStart = () => {
+    setUploadSession(userId, {
+      fieldName,
+      label,
+      status: 'picking'
+    })
+  }
+
   const handleFileChange = async (event) => {
     const input = event.target
     const file = input.files?.[0]
@@ -164,6 +215,11 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
 
     setUploading(true)
     setUploadError(null)
+    setUploadSession(userId, {
+      fieldName,
+      label,
+      status: 'selected'
+    })
 
     try {
       console.log(`Original size: ${file.size / 1024 / 1024} MB`)
@@ -195,11 +251,18 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
       
       // 3. Callback
       onUploadComplete(publicUrl)
+      clearUploadSession(userId)
 
     } catch (err) {
       console.error('Upload failed:', err)
       setUploadError(err.message || '上传失败，请重试')
       onUploadComplete(null) // Clear value on error
+      setUploadSession(userId, {
+        fieldName,
+        label,
+        status: 'failed',
+        message: err.message || '上传失败'
+      })
     } finally {
       setUploading(false)
       input.value = ''
@@ -227,6 +290,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
               id={inputId}
               type="file" 
               accept="image/*,.heic,.heif"
+              onClick={markPickerStart}
               onChange={handleFileChange}
               className="hidden"
             />
@@ -254,6 +318,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
             id={inputId}
             type="file"
             accept="image/*,.heic,.heif"
+            onClick={markPickerStart}
             onChange={handleFileChange}
             className="hidden"
           />
@@ -428,6 +493,7 @@ export default function StudentProfile({ classId, onSuccess }) {
   const [addresses, setAddresses] = useState([])
   const [addressesLoaded, setAddressesLoaded] = useState(false)
   const [addressesLoading, setAddressesLoading] = useState(false)
+  const [browserLabel] = useState(() => getBrowserLabel())
   
   // Search state for address
   const [showAddressList, setShowAddressList] = useState(false)
@@ -458,6 +524,25 @@ export default function StudentProfile({ classId, onSuccess }) {
   // Fetch existing profile and class info
   useEffect(() => {
     if (!user) return
+
+    const restoreUploadSession = () => {
+      const uploadSession = safeParseJSON(sessionStorage.getItem(getUploadSessionKey(user.id)))
+      if (!uploadSession) return
+
+      if (uploadSession.status === 'picking' || uploadSession.status === 'selected') {
+        setMsg({
+          type: 'error',
+          content: `检测到您在选择“${uploadSession.label}”图片后页面被${browserLabel}重新加载。请优先使用安卓Chrome；如果在微信内打开，请点右上角选择“在浏览器打开”后再上传。`
+        })
+      } else if (uploadSession.status === 'failed' && uploadSession.message) {
+        setMsg({
+          type: 'error',
+          content: `${uploadSession.label}上传失败：${uploadSession.message}`
+        })
+      }
+
+      clearUploadSession(user.id)
+    }
 
     const getProfile = async () => {
       try {
@@ -516,7 +601,8 @@ export default function StudentProfile({ classId, onSuccess }) {
 
     getProfile()
     getClassInfo()
-  }, [user, setValue, classId])
+    restoreUploadSession()
+  }, [user, setValue, classId, browserLabel])
 
   // 自动保存草稿
   useEffect(() => {
@@ -530,6 +616,37 @@ export default function StudentProfile({ classId, onSuccess }) {
       localStorage.setItem(`student_profile_draft_${user.id}`, JSON.stringify(draft))
     })
     return () => subscription.unsubscribe()
+  }, [watch, user])
+
+  useEffect(() => {
+    if (!user) return
+
+    const persistDraftSnapshot = () => {
+      const value = watch()
+      const draft = { ...value }
+      delete draft.idCardFront
+      delete draft.idCardBack
+      delete draft.photo
+      localStorage.setItem(`student_profile_draft_${user.id}`, JSON.stringify(draft))
+    }
+
+    const handlePageHide = () => {
+      persistDraftSnapshot()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        persistDraftSnapshot()
+      }
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [watch, user])
 
   const uploadFile = async (file, path) => {
@@ -691,6 +808,12 @@ export default function StudentProfile({ classId, onSuccess }) {
               </div>
             )}
 
+            {(isWeChatBrowser() || isSamsungBrowser()) && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                当前为 `{browserLabel}`。如果选择图片后页面重新加载，请优先改用安卓 Chrome；若在微信内打开，请点右上角选择“在浏览器打开”后再上传。
+              </div>
+            )}
+
             {/* Basic Info */}
             <section>
               <SectionTitle title="基本信息" />
@@ -787,6 +910,8 @@ export default function StudentProfile({ classId, onSuccess }) {
                   <ImageUpload 
                     label="身份证正面" 
                     bucketPath={`id-front/${user.id}`}
+                    userId={user.id}
+                    fieldName="id_card_front_url"
                     defaultUrl={watch('id_card_front_url')}
                     onUploadComplete={(url) => {
                       setValue('id_card_front_url', url, { shouldDirty: true, shouldValidate: true })
@@ -806,6 +931,8 @@ export default function StudentProfile({ classId, onSuccess }) {
                    <ImageUpload 
                     label="身份证反面" 
                     bucketPath={`id-back/${user.id}`}
+                    userId={user.id}
+                    fieldName="id_card_back_url"
                     defaultUrl={watch('id_card_back_url')}
                     onUploadComplete={(url) => {
                       setValue('id_card_back_url', url, { shouldDirty: true, shouldValidate: true })
@@ -820,6 +947,8 @@ export default function StudentProfile({ classId, onSuccess }) {
                    <ImageUpload 
                     label="一寸白底证件照" 
                     bucketPath={`photos/${user.id}`}
+                    userId={user.id}
+                    fieldName="photo_url"
                     defaultUrl={watch('photo_url')}
                     onUploadComplete={(url) => {
                       setValue('photo_url', url, { shouldDirty: true, shouldValidate: true })
