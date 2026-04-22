@@ -1,10 +1,46 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useId } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { NATIONS, ETHNICITIES, ID_TYPES, ADDRESSES } from '../lib/constants'
 import { useNavigate } from 'react-router-dom'
 import { Upload, ChevronDown, Calendar, Search, Loader2, CheckCircle, XCircle } from 'lucide-react'
+
+const MAX_UPLOAD_SIZE = 15 * 1024 * 1024
+
+const isMobileBrowser = () => {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod|HarmonyOS|Mobile/i.test(navigator.userAgent)
+}
+
+const getFileExtension = (file) => {
+  const nameExt = file.name?.split('.').pop()?.toLowerCase()
+  if (nameExt) {
+    return nameExt === 'jpeg' ? 'jpg' : nameExt
+  }
+
+  const mimeExt = file.type?.split('/').pop()?.toLowerCase()
+  if (mimeExt) {
+    return mimeExt === 'jpeg' ? 'jpg' : mimeExt
+  }
+
+  return 'jpg'
+}
+
+const shouldTryCompression = (file) => {
+  if (isMobileBrowser()) return false
+  if (file.size <= 1024 * 1024) return false
+  if (!file.type?.startsWith('image/')) return false
+  if (/heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name || '')) return false
+
+  return (
+    typeof window !== 'undefined' &&
+    typeof FileReader !== 'undefined' &&
+    typeof Image !== 'undefined' &&
+    typeof document !== 'undefined' &&
+    typeof HTMLCanvasElement !== 'undefined'
+  )
+}
 
 // Helper: Lightweight image compression using Canvas
 const compressImage = (file) => {
@@ -45,18 +81,55 @@ const compressImage = (file) => {
             reject(new Error('Canvas compression failed'))
             return
           }
-          // Create new file from blob
-          const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-            type: 'image/jpeg',
-            lastModified: Date.now(),
-          })
-          resolve(newFile)
+
+          try {
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            })
+            resolve({
+              file: newFile,
+              fileExt: 'jpg',
+              contentType: 'image/jpeg'
+            })
+          } catch (error) {
+            resolve({
+              file: blob,
+              fileExt: 'jpg',
+              contentType: 'image/jpeg'
+            })
+          }
         }, 'image/jpeg', 0.7)
       }
       img.onerror = (err) => reject(new Error('Image load failed'))
     }
     reader.onerror = (err) => reject(new Error('File read failed'))
   })
+}
+
+const getUploadPayload = async (file) => {
+  if (file.size > MAX_UPLOAD_SIZE) {
+    throw new Error('图片不能超过15MB，请压缩后再上传')
+  }
+
+  if (!shouldTryCompression(file)) {
+    return {
+      file,
+      fileExt: getFileExtension(file),
+      contentType: file.type || 'application/octet-stream'
+    }
+  }
+
+  try {
+    return await compressImage(file)
+  } catch (error) {
+    console.warn('Compression failed, use original file instead:', error)
+    return {
+      file,
+      fileExt: getFileExtension(file),
+      contentType: file.type || 'application/octet-stream'
+    }
+  }
 }
 
 // UI Components - Defined OUTSIDE the main component to prevent re-mounting on every render
@@ -68,6 +141,7 @@ const SectionTitle = ({ title }) => (
 )
 
 const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error }) => {
+  const inputId = useId()
   const [uploading, setUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(defaultUrl)
   const [uploadError, setUploadError] = useState(null)
@@ -78,39 +152,28 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
   }, [defaultUrl])
 
   const handleFileChange = async (event) => {
-    const file = event.target.files[0]
+    const input = event.target
+    const file = input.files?.[0]
     if (!file) return
 
     setUploading(true)
     setUploadError(null)
 
     try {
-      // 1. Compression (Native Canvas)
       console.log(`Original size: ${file.size / 1024 / 1024} MB`)
-      
-      let compressedFile = file
-      // Only compress if larger than 1MB
-      if (file.size > 1024 * 1024) {
-         try {
-           compressedFile = await compressImage(file)
-           console.log(`Compressed size: ${compressedFile.size / 1024 / 1024} MB`)
-         } catch (compErr) {
-           console.warn('Compression failed, using original:', compErr)
-           // Fallback to original if compression fails, but warn if too big
-           if (file.size > 10 * 1024 * 1024) {
-             throw new Error('图片过大且压缩失败，请选择更小的图片')
-           }
-         }
-      }
+
+      const uploadPayload = await getUploadPayload(file)
 
       // 2. Upload
-      const fileExt = 'jpg' 
-      const fileName = `${Math.random()}.${fileExt}`
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${uploadPayload.fileExt}`
       const filePath = `${bucketPath}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('student-documents')
-        .upload(filePath, compressedFile)
+        .upload(filePath, uploadPayload.file, {
+          contentType: uploadPayload.contentType,
+          upsert: true
+        })
 
       if (uploadError) throw uploadError
 
@@ -130,6 +193,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
       onUploadComplete(null) // Clear value on error
     } finally {
       setUploading(false)
+      input.value = ''
     }
   }
 
@@ -148,11 +212,12 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
           <p className="text-xs text-green-600 flex items-center mb-1">
             <CheckCircle size={12} className="mr-1" /> 已上传
           </p>
-          <label className="cursor-pointer text-xs text-blue-500 underline hover:text-blue-700 z-10">
+          <label htmlFor={inputId} className="cursor-pointer text-xs text-blue-500 underline hover:text-blue-700 z-10">
             重新上传
             <input 
+              id={inputId}
               type="file" 
-              accept="image/*" 
+              accept="image/*,.heic,.heif"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -167,15 +232,21 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
           {uploadError ? (
              <p className="text-xs text-red-500 mt-1 mb-2 text-center">{uploadError}</p>
           ) : (
-             <p className="text-xs text-gray-400 mt-1 mb-2 text-center">点击选择或拍摄 (自动压缩)</p>
+             <p className="text-xs text-gray-400 mt-1 mb-2 text-center">点击选择或拍摄，手机浏览器将直接上传原图</p>
           )}
-          
-          {/* The input covers the whole area for easier clicking */}
-          <input 
-            type="file" 
-            accept="image/*" 
+
+          <label
+            htmlFor={inputId}
+            className="mt-1 inline-flex items-center justify-center rounded-md border border-blue-200 bg-white px-4 py-2 text-sm text-blue-600 shadow-sm"
+          >
+            选择照片
+          </label>
+          <input
+            id={inputId}
+            type="file"
+            accept="image/*,.heic,.heif"
             onChange={handleFileChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="hidden"
           />
         </>
       )}
