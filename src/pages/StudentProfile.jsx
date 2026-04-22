@@ -99,6 +99,24 @@ const clearDebugLogs = () => {
   localStorage.removeItem(DEBUG_LOG_KEY)
 }
 
+const isUploadDebugEnabled = () => {
+  if (typeof window === 'undefined') return false
+
+  const searchParams = new URLSearchParams(window.location.search)
+  const enabledByQuery = searchParams.get('uploadDebug') === '1'
+
+  if (enabledByQuery && typeof localStorage !== 'undefined') {
+    localStorage.setItem('student_profile_upload_debug_enabled', '1')
+  }
+
+  return (
+    enabledByQuery ||
+    import.meta.env.DEV ||
+    (typeof localStorage !== 'undefined' &&
+      localStorage.getItem('student_profile_upload_debug_enabled') === '1')
+  )
+}
+
 const getFileExtension = (file) => {
   const nameExt = file.name?.split('.').pop()?.toLowerCase()
   if (nameExt) {
@@ -586,6 +604,7 @@ export default function StudentProfile({ classId, onSuccess }) {
   const [addressesLoading, setAddressesLoading] = useState(false)
   const [browserLabel] = useState(() => getBrowserLabel())
   const [debugLogs, setDebugLogs] = useState(() => readDebugLogs())
+  const [showDebugPanel] = useState(() => isUploadDebugEnabled())
   
   // Search state for address
   const [showAddressList, setShowAddressList] = useState(false)
@@ -967,70 +986,71 @@ export default function StudentProfile({ classId, onSuccess }) {
         </h1>
         
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Debug Info for Mobile */}
-          <div className="px-8 pt-4 pb-0">
-             <details className="text-xs text-gray-500">
-               <summary>调试日志</summary>
-               <div className="mt-2 space-y-2">
-                 <pre className="p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-32 whitespace-pre-wrap break-all">
+          {showDebugPanel && (
+            <div className="px-8 pt-4 pb-0">
+               <details className="text-xs text-gray-500">
+                 <summary>调试日志</summary>
+                 <div className="mt-2 space-y-2">
+                   <pre className="p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-32 whitespace-pre-wrap break-all">
 {`User: ${user?.email}
 Browser: ${browserLabel}
 PageInstance: ${pageInstanceIdRef.current}
 DebugSession: ${getDebugSessionId()}
 UA: ${navigator.userAgent}`}
-                 </pre>
-                 <div className="flex gap-2">
-                   <button
-                     type="button"
-                     onClick={() => {
-                       syncDebugLogs()
-                       alert('已刷新调试日志')
-                     }}
-                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
-                   >
-                     刷新日志
-                   </button>
-                   <button
-                     type="button"
-                     onClick={async () => {
-                       const content = readDebugLogs()
-                         .map((item) => JSON.stringify(item))
-                         .join('\n')
-                       try {
-                         if (navigator.clipboard?.writeText) {
-                           await navigator.clipboard.writeText(content)
-                           alert('调试日志已复制')
-                         } else {
-                           alert('当前浏览器不支持复制，请手动截图日志')
+                   </pre>
+                   <div className="flex gap-2">
+                     <button
+                       type="button"
+                       onClick={() => {
+                         syncDebugLogs()
+                         alert('已刷新调试日志')
+                       }}
+                       className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                     >
+                       刷新日志
+                     </button>
+                     <button
+                       type="button"
+                       onClick={async () => {
+                         const content = readDebugLogs()
+                           .map((item) => JSON.stringify(item))
+                           .join('\n')
+                         try {
+                           if (navigator.clipboard?.writeText) {
+                             await navigator.clipboard.writeText(content)
+                             alert('调试日志已复制')
+                           } else {
+                             alert('当前浏览器不支持复制，请手动截图日志')
+                           }
+                         } catch (error) {
+                           alert('复制失败，请手动截图日志')
                          }
-                       } catch (error) {
-                         alert('复制失败，请手动截图日志')
-                       }
-                     }}
-                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
-                   >
-                     复制日志
-                   </button>
-                   <button
-                     type="button"
-                     onClick={() => {
-                       clearDebugLogs()
-                       syncDebugLogs()
-                       alert('调试日志已清空')
-                     }}
-                     className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
-                   >
-                     清空日志
-                   </button>
-                 </div>
-                 <pre className="p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-64 whitespace-pre-wrap break-all">
+                       }}
+                       className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                     >
+                       复制日志
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => {
+                         clearDebugLogs()
+                         syncDebugLogs()
+                         alert('调试日志已清空')
+                       }}
+                       className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                     >
+                       清空日志
+                     </button>
+                   </div>
+                   <pre className="p-2 bg-gray-900 text-green-400 rounded overflow-auto max-h-64 whitespace-pre-wrap break-all">
 {debugLogs.length
   ? debugLogs.map((item) => JSON.stringify(item)).join('\n')
   : '暂无调试日志'}
-                 </pre>
-               </div>
-             </details>
-          </div>
+                   </pre>
+                 </div>
+               </details>
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit, onError)} className="p-8 space-y-10">
             {msg.content && (
               <div className={`p-4 rounded-lg ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
