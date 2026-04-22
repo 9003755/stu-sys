@@ -4,39 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { NATIONS, ETHNICITIES, ID_TYPES, ADDRESSES } from '../lib/constants'
 import { useNavigate } from 'react-router-dom'
-import { Upload, ChevronDown, Calendar, Loader2, CheckCircle } from 'lucide-react'
-
-const MAX_UPLOAD_SIZE = 15 * 1024 * 1024
-
-const getFileExtension = (file) => {
-  const nameExt = file.name?.split('.').pop()?.toLowerCase()
-  if (nameExt) {
-    if (nameExt === 'jpeg') return 'jpg'
-    return nameExt
-  }
-
-  const mimeExt = file.type?.split('/').pop()?.toLowerCase()
-  if (mimeExt) {
-    if (mimeExt === 'jpeg') return 'jpg'
-    return mimeExt
-  }
-
-  return 'jpg'
-}
-
-const shouldTryCompression = (file) => {
-  if (file.size <= 1024 * 1024) return false
-  if (!file.type?.startsWith('image/')) return false
-  if (/heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name || '')) return false
-
-  return (
-    typeof window !== 'undefined' &&
-    typeof FileReader !== 'undefined' &&
-    typeof Image !== 'undefined' &&
-    typeof document !== 'undefined' &&
-    typeof HTMLCanvasElement !== 'undefined'
-  )
-}
+import { Upload, ChevronDown, Calendar, Search, Loader2, CheckCircle, XCircle } from 'lucide-react'
 
 // Helper: Lightweight image compression using Canvas
 const compressImage = (file) => {
@@ -77,56 +45,18 @@ const compressImage = (file) => {
             reject(new Error('Canvas compression failed'))
             return
           }
-
-          // Some mobile browsers do not support creating File from Blob reliably.
-          try {
-            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            })
-            resolve({
-              file: newFile,
-              fileExt: 'jpg',
-              contentType: 'image/jpeg'
-            })
-          } catch (error) {
-            resolve({
-              file: blob,
-              fileExt: 'jpg',
-              contentType: 'image/jpeg'
-            })
-          }
+          // Create new file from blob
+          const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          })
+          resolve(newFile)
         }, 'image/jpeg', 0.7)
       }
       img.onerror = (err) => reject(new Error('Image load failed'))
     }
     reader.onerror = (err) => reject(new Error('File read failed'))
   })
-}
-
-const getUploadPayload = async (file) => {
-  if (file.size > MAX_UPLOAD_SIZE) {
-    throw new Error('图片不能超过15MB，请压缩后再上传')
-  }
-
-  if (!shouldTryCompression(file)) {
-    return {
-      file,
-      fileExt: getFileExtension(file),
-      contentType: file.type || 'application/octet-stream'
-    }
-  }
-
-  try {
-    return await compressImage(file)
-  } catch (error) {
-    console.warn('Compression failed, fallback to original file:', error)
-    return {
-      file,
-      fileExt: getFileExtension(file),
-      contentType: file.type || 'application/octet-stream'
-    }
-  }
 }
 
 // UI Components - Defined OUTSIDE the main component to prevent re-mounting on every render
@@ -148,28 +78,39 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
   }, [defaultUrl])
 
   const handleFileChange = async (event) => {
-    const input = event.target
-    const file = input.files?.[0]
+    const file = event.target.files[0]
     if (!file) return
 
     setUploading(true)
     setUploadError(null)
 
     try {
+      // 1. Compression (Native Canvas)
       console.log(`Original size: ${file.size / 1024 / 1024} MB`)
-
-      const uploadPayload = await getUploadPayload(file)
+      
+      let compressedFile = file
+      // Only compress if larger than 1MB
+      if (file.size > 1024 * 1024) {
+         try {
+           compressedFile = await compressImage(file)
+           console.log(`Compressed size: ${compressedFile.size / 1024 / 1024} MB`)
+         } catch (compErr) {
+           console.warn('Compression failed, using original:', compErr)
+           // Fallback to original if compression fails, but warn if too big
+           if (file.size > 10 * 1024 * 1024) {
+             throw new Error('图片过大且压缩失败，请选择更小的图片')
+           }
+         }
+      }
 
       // 2. Upload
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${uploadPayload.fileExt}`
+      const fileExt = 'jpg' 
+      const fileName = `${Math.random()}.${fileExt}`
       const filePath = `${bucketPath}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('student-documents')
-        .upload(filePath, uploadPayload.file, {
-          contentType: uploadPayload.contentType,
-          upsert: true
-        })
+        .upload(filePath, compressedFile)
 
       if (uploadError) throw uploadError
 
@@ -189,7 +130,6 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
       onUploadComplete(null) // Clear value on error
     } finally {
       setUploading(false)
-      input.value = ''
     }
   }
 
@@ -227,13 +167,13 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error })
           {uploadError ? (
              <p className="text-xs text-red-500 mt-1 mb-2 text-center">{uploadError}</p>
           ) : (
-             <p className="text-xs text-gray-400 mt-1 mb-2 text-center">点击选择或拍摄，压缩失败时会自动直传原图</p>
+             <p className="text-xs text-gray-400 mt-1 mb-2 text-center">点击选择或拍摄 (自动压缩)</p>
           )}
           
           {/* The input covers the whole area for easier clicking */}
           <input 
             type="file" 
-            accept="image/*,.heic,.heif" 
+            accept="image/*" 
             onChange={handleFileChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
@@ -406,6 +346,17 @@ export default function StudentProfile({ classId, onSuccess }) {
   const [msg, setMsg] = useState({ type: '', content: '' })
   const [profileId, setProfileId] = useState(null)
   
+  // Search state for address
+  const [showAddressList, setShowAddressList] = useState(false)
+  const [addressSearch, setAddressSearch] = useState('')
+  const regionValue = watch('region')
+
+  // Filter addresses
+  const filteredAddresses = useMemo(() => {
+    if (!addressSearch) return []
+    return ADDRESSES.filter(addr => addr.includes(addressSearch)).slice(0, 20)
+  }, [addressSearch])
+
   // Fetch existing profile and class info
   useEffect(() => {
     if (!user) return
@@ -426,6 +377,7 @@ export default function StudentProfile({ classId, onSuccess }) {
           Object.keys(data).forEach(key => {
             setValue(key, data[key])
           })
+          if (data.region) setAddressSearch(data.region)
         } else {
           // 如果数据库中没有档案，尝试从本地缓存恢复草稿 (防止手机端刷新导致数据丢失)
           const draft = localStorage.getItem(`student_profile_draft_${user.id}`)
@@ -438,6 +390,7 @@ export default function StudentProfile({ classId, onSuccess }) {
                   setValue(key, parsed[key])
                 }
               })
+              if (parsed.region) setAddressSearch(parsed.region)
               // 如果有草稿，提示用户
               setMsg({ type: 'success', content: '已为您恢复上次未提交的填写记录' })
             } catch (e) {
@@ -669,7 +622,50 @@ export default function StudentProfile({ classId, onSuccess }) {
                 <InputField label="邮箱" name="email_contact" placeholder="example@email.com" required register={register} errors={errors} />
                 <InputField label="邮政编码" name="postal_code" placeholder="请输入邮政编码" required register={register} errors={errors} />
                 
-                <SelectField label="地址 (省/市/区)" name="region" options={ADDRESSES} required register={register} errors={errors} />
+                {/* Address Search Field */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    地址 (省/市/区) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={addressSearch}
+                      onChange={(e) => {
+                        setAddressSearch(e.target.value)
+                        setShowAddressList(true)
+                        setValue('region', '') // Clear value when typing
+                      }}
+                      onFocus={() => setShowAddressList(true)}
+                      placeholder="如：北京市"
+                      className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+                    />
+                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+                      <Search size={18} />
+                    </div>
+                  </div>
+                  {/* Custom Dropdown */}
+                  {showAddressList && addressSearch && filteredAddresses.length > 0 && (
+                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
+                      {filteredAddresses.map((addr, idx) => (
+                        <li 
+                          key={idx}
+                          onClick={() => {
+                            setValue('region', addr)
+                            setAddressSearch(addr)
+                            setShowAddressList(false)
+                          }}
+                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700"
+                        >
+                          {addr}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {/* Hidden input to hold the actual form value for validation */}
+                  <input type="hidden" {...register('region', { required: '地址不能为空' })} />
+                  {errors.region && <p className="text-red-500 text-xs mt-1">{errors.region.message}</p>}
+                </div>
 
                 <InputField label="详细地址" name="address_detail" placeholder="请输入详细地址（街道/门牌号）" required colSpan={2} register={register} errors={errors} />
               </div>
