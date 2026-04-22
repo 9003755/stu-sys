@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useId } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { NATIONS, ETHNICITIES, ID_TYPES, ADDRESSES } from '../lib/constants'
+import { NATIONS, ETHNICITIES, ID_TYPES } from '../lib/constants'
 import { useNavigate } from 'react-router-dom'
 import { Upload, ChevronDown, Calendar, Search, Loader2, CheckCircle, XCircle } from 'lucide-react'
 
@@ -425,17 +425,35 @@ export default function StudentProfile({ classId, onSuccess }) {
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState({ type: '', content: '' })
   const [profileId, setProfileId] = useState(null)
+  const [addresses, setAddresses] = useState([])
+  const [addressesLoaded, setAddressesLoaded] = useState(false)
+  const [addressesLoading, setAddressesLoading] = useState(false)
   
   // Search state for address
   const [showAddressList, setShowAddressList] = useState(false)
   const [addressSearch, setAddressSearch] = useState('')
-  const regionValue = watch('region')
+
+  const loadAddresses = async () => {
+    if (addressesLoaded || addressesLoading) return
+
+    try {
+      setAddressesLoading(true)
+      const module = await import('../lib/addresses.json')
+      const data = module.default || module
+      setAddresses(data.addresses || [])
+      setAddressesLoaded(true)
+    } catch (error) {
+      console.error('Error loading addresses:', error)
+    } finally {
+      setAddressesLoading(false)
+    }
+  }
 
   // Filter addresses
   const filteredAddresses = useMemo(() => {
     if (!addressSearch) return []
-    return ADDRESSES.filter(addr => addr.includes(addressSearch)).slice(0, 20)
-  }, [addressSearch])
+    return addresses.filter(addr => addr.includes(addressSearch)).slice(0, 20)
+  }, [addressSearch, addresses])
 
   // Fetch existing profile and class info
   useEffect(() => {
@@ -712,11 +730,15 @@ export default function StudentProfile({ classId, onSuccess }) {
                       type="text"
                       value={addressSearch}
                       onChange={(e) => {
+                        loadAddresses()
                         setAddressSearch(e.target.value)
                         setShowAddressList(true)
                         setValue('region', '') // Clear value when typing
                       }}
-                      onFocus={() => setShowAddressList(true)}
+                      onFocus={() => {
+                        loadAddresses()
+                        setShowAddressList(true)
+                      }}
                       placeholder="如：北京市"
                       className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
                     />
@@ -725,6 +747,11 @@ export default function StudentProfile({ classId, onSuccess }) {
                     </div>
                   </div>
                   {/* Custom Dropdown */}
+                  {showAddressList && addressSearch && addressesLoading && (
+                    <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 px-4 py-2 text-sm text-gray-500">
+                      地址加载中...
+                    </div>
+                  )}
                   {showAddressList && addressSearch && filteredAddresses.length > 0 && (
                     <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
                       {filteredAddresses.map((addr, idx) => (

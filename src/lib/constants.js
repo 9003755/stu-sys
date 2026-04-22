@@ -1,4 +1,4 @@
-import data from './data.json'
+import data from './form-options.json'
 
 export const NATIONS = data.countries
 export const ETHNICITIES = data.ethnicities
@@ -8,4 +8,3 @@ export const ID_TYPES = [
   "港澳台通行证",
   "其他"
 ]
-export const ADDRESSES = data.addresses
