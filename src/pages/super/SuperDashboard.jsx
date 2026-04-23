@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabaseSuper } from '../../lib/supabase'
+import { buildAppUrl } from '../../lib/siteUrls'
 import { useSuperAuth } from '../../contexts/SuperAuthContext'
 import { Shield, UserPlus, Users, Trash2, RefreshCw, LogOut, Key, XCircle } from 'lucide-react'
 
@@ -19,6 +20,7 @@ export default function SuperDashboard() {
       navigate('/super/login')
     }
   }
+  const adminRegisterUrl = buildAppUrl('/admin/register')
   const [admins, setAdmins] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -432,7 +434,7 @@ export default function SuperDashboard() {
           </h2>
           <div className="flex items-center space-x-4">
             <button 
-              onClick={() => window.location.href = '/super/students'}
+              onClick={() => navigate('/super/students')}
               className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
             >
               <Users size={16} className="mr-2" />
@@ -449,9 +451,9 @@ export default function SuperDashboard() {
               </button>
             )}
             <div className="text-sm text-gray-400 flex items-center">
-               <span className="mr-2">💡 新增管理员请访问：</span>
-               <a href="/admin/register" target="_blank" className="text-blue-400 hover:text-blue-300 underline">
-                 /admin/register
+               <span className="mr-2">💡 新增管理员请访问主站注册页：</span>
+               <a href={adminRegisterUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+                 {adminRegisterUrl}
                </a>
             </div>
           </div>

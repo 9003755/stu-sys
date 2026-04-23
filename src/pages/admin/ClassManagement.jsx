@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabaseAdmin } from '../../lib/supabase'
+import { buildAppUrl } from '../../lib/siteUrls'
 import { QRCodeSVG } from 'qrcode.react'
 import { Trash2, Plus, X, Share2, Users } from 'lucide-react'
 
@@ -119,7 +120,7 @@ export default function ClassManagement({ onViewStudents }) {
 
   // Enrollment Link
   const getEnrollLink = (classId) => {
-    return `${window.location.origin}/enroll/${classId}`
+    return buildAppUrl(`/enroll/${classId}`)
   }
 
   if (loading) return <div className="p-8 text-center text-gray-500">加载中...</div>
@@ -260,7 +261,7 @@ export default function ClassManagement({ onViewStudents }) {
             </button>
             <h3 className="text-xl font-bold mb-2">{currentClass.name}</h3>
             <p className="text-gray-500 text-sm mb-2">扫码报名此班级</p>
-            <p className="text-red-500 text-sm font-bold mb-6">手机端仅支持谷歌浏览器</p>
+            <p className="text-amber-500 text-sm font-bold mb-6">建议使用手机系统浏览器或Chrome打开</p>
             
             <div className="flex justify-center mb-6">
               <QRCodeSVG 

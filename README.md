@@ -12,6 +12,7 @@
 
 - 项目总览与历史问题总结：[PROJECT_SUMMARY.md](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/PROJECT_SUMMARY.md)
 - 本次移动端上传修复复盘：[UPLOAD_FIX_RETROSPECT_20260422.md](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/docs/UPLOAD_FIX_RETROSPECT_20260422.md)
+- 超级管理员独立子域名部署说明：[SUPER_ADMIN_SUBDOMAIN_SETUP.md](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/docs/SUPER_ADMIN_SUBDOMAIN_SETUP.md)
 
 ## 本地开发
 

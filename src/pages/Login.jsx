@@ -117,7 +117,7 @@ export default function Login() {
             </p>
             <p className="flex items-start">
               <span className="mr-2">📱</span>
-              <span>手机端注册需用谷歌浏览器</span>
+              <span>手机端报名推荐使用系统浏览器、微信或 Chrome</span>
             </p>
           </div>
         </div>

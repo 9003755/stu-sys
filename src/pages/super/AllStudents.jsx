@@ -392,7 +392,7 @@ export default function AllStudents() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <button 
-              onClick={() => navigate('/super')}
+              onClick={() => navigate('/super/dashboard')}
               className="flex items-center text-gray-400 hover:text-white mb-2 transition-colors"
             >
               <ArrowLeft size={20} className="mr-1" /> 返回控制台
