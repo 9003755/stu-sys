@@ -6,6 +6,32 @@
 
 ---
 
+## 0. 最新修复更新
+
+### 0.1 2026-04-22 移动端图片上传修复
+*   **问题现象**：
+    *   安卓 Chrome 可以正常上传身份证与证件照
+    *   微信内置浏览器、三星浏览器在选图返回后出现全屏“加载中...”，随后回到上传前状态
+    *   图片没有进入上传流程，也没有生成预览图
+*   **最终根因**：
+    *   问题不只是图片压缩兼容性，而是“选图返回后的页面恢复链路不稳定”
+    *   原有 `AuthContext` 会在恢复会话前直接隐藏子树
+    *   `StudentProfile` 与 `EnrollConfirmation` 处于关键懒加载链路中，导致相册返回后更容易整页重挂
+*   **最终修复**：
+    *   稳定上传组件链路，保留独立上传状态
+    *   为学生端会话增加显式 `storageKey`，并支持同步恢复已存用户
+    *   调整 `AuthContext`，避免认证恢复期直接掐掉整棵页面树
+    *   将报名关键页从懒加载改为直接加载
+    *   为 `EnrollConfirmation` 增加缓存恢复，减少重走班级/档案判断链路
+*   **验证结果**：
+    *   微信内置浏览器与三星浏览器已能正常完成图片上传
+    *   调试日志确认上传链路完整：`picker-click -> change-file -> upload-start -> upload-success`
+    *   页面实例在上传过程中保持稳定，不再出现 `unmount -> mount`
+*   **专项复盘文档**：
+    *   详见 [UPLOAD_FIX_RETROSPECT_20260422.md](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/docs/UPLOAD_FIX_RETROSPECT_20260422.md)
+
+---
+
 ## 1. 基础设施与工作流 (Infrastructure & Workflow)
 
 本项目的构建依托于现代 Serverless 架构，主要由三大基础设施支撑：GitHub、Netlify 和 Supabase。
