@@ -339,7 +339,7 @@ export default function AllStudents() {
                   </div>
                   <div className="md:col-span-2">
                     <span className="text-gray-500 text-sm block">详细地址</span>
-                    <span className="font-medium text-white">{selectedProfile.address}</span>
+                    <span className="font-medium text-white">{selectedProfile.address_detail}</span>
                   </div>
                 </div>
               </section>
