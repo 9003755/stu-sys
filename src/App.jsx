@@ -13,6 +13,7 @@ const AdminRegister = lazy(() => import('./pages/admin/AdminRegister'))
 const SuperLogin = lazy(() => import('./pages/super/SuperLogin'))
 const SuperDashboard = lazy(() => import('./pages/super/SuperDashboard'))
 const AllStudents = lazy(() => import('./pages/super/AllStudents'))
+const ExcelTemplateFilterTool = lazy(() => import('./pages/tools/ExcelTemplateFilterTool'))
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -67,6 +68,7 @@ function App() {
                 <Route path="/admin/login" element={<Navigate to="/login?role=admin" replace />} />
                 <Route path="/admin/register" element={<AdminRegister />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/tools/excel-template-filter" element={<ExcelTemplateFilterTool />} />
                 
                 {/* Super Admin Routes */}
                 <Route path="/super/login" element={<SuperLogin />} />

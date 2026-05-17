@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabaseSuper } from '../../lib/supabase'
-import { Users, Search, Filter, Loader2, ArrowLeft, Trash2, Eye, X } from 'lucide-react'
+import { Users, Search, Filter, Loader2, ArrowLeft, Trash2, Eye, X, KeyRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import DangerDeleteModal from '../../components/DangerDeleteModal'
@@ -73,6 +73,28 @@ export default function AllStudents() {
     }
     
     performDelete(studentId)
+  }
+
+  const handleResetStudentPassword = async (studentId, email) => {
+    if (!studentId) {
+      alert('无法重置：缺少学员账号标识')
+      return
+    }
+
+    const newPassword = window.prompt(`请输入学员 ${email || ''} 的新密码（至少6位）`, '123456')
+    if (!newPassword) return
+
+    try {
+      const { error } = await supabaseSuper.rpc('reset_student_password', {
+        target_user_id: studentId,
+        new_password: newPassword
+      })
+      if (error) throw error
+      alert(`已重置密码：${email || '学员'}，新密码为：${newPassword}`)
+    } catch (error) {
+      console.error('Reset password error:', error)
+      alert('重置密码失败：' + error.message)
+    }
   }
 
   const performDelete = async (studentId) => {
@@ -561,7 +583,16 @@ export default function AllStudents() {
                         {new Date(student.registered_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
+                        <button
+                          onClick={() => handleResetStudentPassword(student.student_id, student.student_email)}
+                          className="text-blue-400 hover:text-blue-300 border border-blue-900/50 hover:bg-blue-900/20 px-3 py-1 rounded transition-colors mr-2"
+                        >
+                          <span className="inline-flex items-center">
+                            <KeyRound size={14} className="mr-1" />
+                            重置密码
+                          </span>
+                        </button>
+                        <button
                           onClick={() => handleDelete(student.student_id, student.student_email, student.has_profile)}
                           className="text-red-400 hover:text-red-300 border border-red-900/50 hover:bg-red-900/20 px-3 py-1 rounded transition-colors"
                         >

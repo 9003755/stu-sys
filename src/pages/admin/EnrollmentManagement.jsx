@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabaseAdmin } from '../../lib/supabase'
-import { Check, X, Search, Filter, Eye, Trash2, Download, FileSpreadsheet } from 'lucide-react'
+import { Check, X, Search, Filter, Eye, Trash2, Download, FileSpreadsheet, KeyRound } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import JSZip from 'jszip'
 import ExcelJS from 'exceljs'
@@ -178,6 +178,28 @@ export default function EnrollmentManagement({ initialClassId = null }) {
     } catch (error) {
       console.error('Error deleting enrollment:', error)
       alert('删除失败')
+    }
+  }
+
+  const handleResetStudentPassword = async (studentUserId, studentEmail) => {
+    if (!studentUserId) {
+      alert('无法重置：缺少学员账号标识')
+      return
+    }
+
+    const newPassword = window.prompt(`请输入学员 ${studentEmail || ''} 的新密码（至少6位）`, '123456')
+    if (!newPassword) return
+
+    try {
+      const { error } = await supabaseAdmin.rpc('reset_student_password', {
+        target_user_id: studentUserId,
+        new_password: newPassword
+      })
+      if (error) throw error
+      alert(`已重置密码：${studentEmail || '学员'}，新密码为：${newPassword}`)
+    } catch (error) {
+      console.error('Reset password error:', error)
+      alert('重置密码失败：' + error.message)
     }
   }
 
@@ -895,6 +917,13 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                     {item.status !== 'pending' && (
                       <span className="text-gray-400 text-xs">已处理</span>
                     )}
+                    <button
+                      onClick={() => handleResetStudentPassword(item.user_id, item.user_email)}
+                      className="text-blue-500 hover:text-blue-700 ml-2"
+                      title="重置学员密码"
+                    >
+                      <KeyRound size={16} />
+                    </button>
                     <button 
                       onClick={() => handleDelete(item.id)}
                       className="text-red-500 hover:text-red-700 ml-2"

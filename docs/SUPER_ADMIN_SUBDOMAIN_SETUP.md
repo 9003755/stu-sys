@@ -59,6 +59,13 @@ VITE_SUPER_SITE_URL=https://super.example.com
 
 这样可以先实现“任何电脑随时打开超级管理员后台”，同时把域名职责先分开。
 
+## 登录信息 (Login Credentials)
+
+- **登录地址**: `https://super.example.com/super/login` (或对应子域名的 `/super/login`)
+- **账号**: `neoyt@126.com`
+- **密码**: 请通过私密渠道保存与分发（不要提交到代码仓库）
+- **验证码/二次验证**: 如启用邮箱验证码，请以实际收到的验证码为准（不要在文档中固定写死）
+
 ## 上线步骤
 
 1. 在 Netlify 新建超级管理员站点
