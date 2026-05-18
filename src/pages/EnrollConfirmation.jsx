@@ -192,14 +192,14 @@ export default function EnrollConfirmation() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
+      <div className="min-h-screen flex items-center justify-center vercel-hero-bg px-4 py-12">
+        <div className="max-w-md w-full vercel-card p-8">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">
+            <h2 className="text-xl font-semibold text-[var(--vercel-ink)]">
               {authMode === 'login' ? '登录以继续报名' : '注册账号以报名'}
             </h2>
-            <p className="text-sm text-gray-500 mt-2">
-              您正在报名班级：<span className="font-medium text-blue-600">{classInfo ? classInfo.name : '加载中...'}</span>
+            <p className="text-sm text-[var(--vercel-body)] mt-2">
+              您正在报名班级：<span className="font-medium text-[var(--vercel-ink)]">{classInfo ? classInfo.name : '加载中...'}</span>
             </p>
           </div>
 
@@ -211,24 +211,24 @@ export default function EnrollConfirmation() {
 
           <form onSubmit={handleAuth} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+              <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1">邮箱</label>
               <input
                 type="email"
                 required
                 value={authEmail}
                 onChange={e => setAuthEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-[var(--vercel-hairline)] rounded-md bg-white px-3 py-2 text-sm text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)] focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent"
                 placeholder="请输入邮箱"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
+              <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1">密码</label>
               <input
                 type="password"
                 required
                 value={authPassword}
                 onChange={e => setAuthPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-[var(--vercel-hairline)] rounded-md bg-white px-3 py-2 text-sm text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)] focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent"
                 placeholder="请输入密码"
                 minLength={6}
               />
@@ -236,7 +236,7 @@ export default function EnrollConfirmation() {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="w-full bg-[var(--vercel-ink)] text-white py-2.5 rounded-full hover:bg-black transition-colors disabled:opacity-50 text-sm font-medium"
             >
               {authLoading ? '处理中...' : (authMode === 'login' ? '登录' : '注册并登录')}
             </button>
@@ -248,7 +248,7 @@ export default function EnrollConfirmation() {
                 还没有账号？
                 <button 
                   onClick={() => setAuthMode('register')}
-                  className="text-blue-600 hover:underline ml-1 font-medium"
+                  className="text-[var(--vercel-link)] hover:underline ml-1 font-medium"
                 >
                   立即注册
                 </button>
@@ -258,7 +258,7 @@ export default function EnrollConfirmation() {
                 已有账号？
                 <button 
                   onClick={() => setAuthMode('login')}
-                  className="text-blue-600 hover:underline ml-1 font-medium"
+                  className="text-[var(--vercel-link)] hover:underline ml-1 font-medium"
                 >
                   直接登录
                 </button>
@@ -311,14 +311,14 @@ export default function EnrollConfirmation() {
 
   if (enrollStatus === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md text-center">
+      <div className="min-h-screen flex items-center justify-center vercel-hero-bg px-4 py-12">
+        <div className="max-w-md w-full vercel-card p-8 text-center">
           <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-          <h2 className="text-2xl font-bold mb-2 text-green-600">报名成功！</h2>
-          <p className="text-gray-500 mb-6">您已成功提交报名申请，请等待管理员审核。</p>
+          <h2 className="text-2xl font-semibold mb-2 text-[var(--vercel-ink)]">报名成功</h2>
+          <p className="text-[var(--vercel-body)] mb-6">已提交报名申请，请等待管理员审核。</p>
           <button 
             onClick={handleFinishAndLogout}
-            className="block w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors font-medium"
+            className="block w-full bg-[var(--vercel-ink)] text-white py-2.5 rounded-full hover:bg-black transition-colors font-medium"
           >
             完成并退出
           </button>
@@ -328,23 +328,22 @@ export default function EnrollConfirmation() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-lg mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="bg-blue-600 px-6 py-4">
-          <h1 className="text-xl font-bold text-white text-center">确认报名信息</h1>
+    <div className="min-h-screen vercel-hero-bg py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-lg mx-auto vercel-card overflow-hidden">
+        <div className="px-6 py-5 border-b border-[var(--vercel-hairline)]">
+          <h1 className="text-lg font-semibold text-[var(--vercel-ink)] text-center">确认报名信息</h1>
         </div>
-        
         <div className="p-8">
           {classInfo && (
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">{classInfo.name}</h2>
-              <div className="flex items-center text-sm text-gray-500 mb-4">
-                <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs mr-2">
+              <h2 className="text-2xl font-semibold text-[var(--vercel-ink)] mb-2">{classInfo.name}</h2>
+              <div className="flex items-center text-sm text-[var(--vercel-body)] mb-4">
+                <span className="bg-[var(--vercel-canvas-soft-2)] text-[var(--vercel-body)] px-2 py-0.5 rounded-full text-xs mr-2 border border-[var(--vercel-hairline)]">
                   {classInfo.status === 'recruiting' ? '招生中' : classInfo.status}
                 </span>
                 <span>开班日期: {classInfo.start_date}</span>
               </div>
-              <p className="text-gray-600 bg-gray-50 p-4 rounded-lg border border-gray-100">
+              <p className="text-[var(--vercel-body)] bg-[var(--vercel-canvas-soft)] p-4 rounded-xl border border-[var(--vercel-hairline)]">
                 {classInfo.description || '暂无描述'}
               </p>
             </div>
@@ -363,12 +362,12 @@ export default function EnrollConfirmation() {
                 <p className="text-xs opacity-75">当前账号: {user.email}</p>
               </div>
               <div className="space-y-3">
-                <Link to="/" className="block w-full bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200">
+                <Link to="/" className="block w-full bg-[var(--vercel-canvas-soft)] text-[var(--vercel-ink)] py-2.5 rounded-full hover:bg-[var(--vercel-canvas-soft-2)] border border-[var(--vercel-hairline)]">
                   返回首页
                 </Link>
                 <button 
                   onClick={handleFinishAndLogout}
-                  className="block w-full border border-red-200 text-red-600 bg-white py-2 rounded hover:bg-red-50 text-sm"
+                  className="block w-full border border-red-200 text-red-600 bg-white py-2.5 rounded-full hover:bg-red-50 text-sm"
                 >
                   并非本人？切换账号/重新报名
                 </button>
@@ -377,7 +376,7 @@ export default function EnrollConfirmation() {
           ) : (
             <button
               onClick={handleEnroll}
-              className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow hover:bg-blue-700 transition-colors flex items-center justify-center"
+              className="w-full bg-[var(--vercel-ink)] text-white font-semibold py-3 px-4 rounded-full shadow-sm hover:bg-black transition-colors flex items-center justify-center"
             >
               确认报名
             </button>

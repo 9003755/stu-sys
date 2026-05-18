@@ -245,8 +245,8 @@ const getUploadPayload = async (file) => {
 // UI Components - Defined OUTSIDE the main component to prevent re-mounting on every render
 const SectionTitle = ({ title }) => (
   <div className="flex items-center mb-6">
-    <div className="w-1.5 h-6 bg-blue-600 mr-3 rounded-full"></div>
-    <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+    <div className="h-5 w-1.5 bg-[var(--vercel-ink)] mr-3 rounded-full"></div>
+    <h3 className="text-base font-semibold tracking-tight text-[var(--vercel-ink)]">{title}</h3>
   </div>
 )
 
@@ -378,8 +378,8 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
   }
 
   return (
-    <div className={`relative border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center transition-colors min-h-[160px] 
-      ${error ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
+    <div className={`relative border border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-colors min-h-[160px] 
+      ${error ? 'border-red-300 bg-red-50' : 'border-[var(--vercel-hairline)] bg-white hover:bg-[var(--vercel-canvas-soft)]'}`}>
       
       {uploading ? (
         <div className="flex flex-col items-center text-blue-600">
@@ -418,7 +418,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
 
           <label
             htmlFor={inputId}
-            className="mt-1 inline-flex items-center justify-center rounded-md border border-blue-200 bg-white px-4 py-2 text-sm text-blue-600 shadow-sm"
+            className="mt-1 inline-flex items-center justify-center rounded-full border border-[var(--vercel-hairline)] bg-white px-4 py-2 text-sm font-medium text-[var(--vercel-ink)] shadow-sm hover:bg-[var(--vercel-canvas-soft)]"
           >
             选择照片
           </label>
@@ -442,7 +442,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
 
 const InputField = ({ label, name, type = "text", placeholder, required = false, colSpan = 1, icon: Icon, register, errors }) => (
   <div className={`${colSpan === 2 ? 'col-span-1 md:col-span-2' : 'col-span-1'}`}>
-    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+    <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <div className="relative">
@@ -450,7 +450,7 @@ const InputField = ({ label, name, type = "text", placeholder, required = false,
         type={type}
         {...register(name, { required: required && `${label}不能为空` })}
         placeholder={placeholder}
-        className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+        className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)]"
       />
       {Icon && (
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
@@ -464,13 +464,13 @@ const InputField = ({ label, name, type = "text", placeholder, required = false,
 
 const SelectField = ({ label, name, options, required = false, register, errors }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+    <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <div className="relative">
       <select
         {...register(name, { required: required && `${label}不能为空` })}
-        className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+        className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
       >
         <option value="">请选择</option>
         {options.map(opt => (
@@ -531,7 +531,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
 
   return (
     <div className="col-span-1 md:col-span-2">
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+      <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="grid grid-cols-3 gap-2">
@@ -539,7 +539,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
           <select
             value={year}
             onChange={(e) => updateDate(Number(e.target.value), null, null)}
-            className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+            className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
           >
             <option value="">年</option>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -552,7 +552,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
           <select
             value={month}
             onChange={(e) => updateDate(null, Number(e.target.value), null)}
-            className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+            className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
           >
             <option value="">月</option>
             {months.map(m => <option key={m} value={m}>{m}</option>)}
@@ -565,7 +565,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
           <select
             value={day}
             onChange={(e) => updateDate(null, null, Number(e.target.value))}
-            className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+            className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
           >
             <option value="">日</option>
             {days.map(d => <option key={d} value={d}>{d}</option>)}
@@ -974,18 +974,18 @@ export default function StudentProfile({ classId, onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen vercel-hero-bg py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-extrabold text-center text-gray-800 mb-10 tracking-tight">
+        <h1 className="text-3xl font-semibold text-center text-[var(--vercel-ink)] mb-10 tracking-tight">
           {classInfo ? (
             <>
-              <span className="block text-lg font-medium text-blue-600 mb-2">您正在报名：{classInfo.name}</span>
-              完善资料以完成报名 <span className="text-xs text-gray-400 font-normal ml-2">v1.2</span>
+              <span className="block text-sm font-medium text-[var(--vercel-body)] mb-2">您正在报名：{classInfo.name}</span>
+              完善资料以完成报名 <span className="text-xs text-[var(--vercel-mute)] font-normal ml-2">v1.2</span>
             </>
           ) : '学员档案 v1.2'}
         </h1>
         
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="vercel-card overflow-hidden">
           {showDebugPanel && (
             <div className="px-8 pt-4 pb-0">
                <details className="text-xs text-gray-500">
@@ -1053,13 +1053,13 @@ UA: ${navigator.userAgent}`}
           )}
           <form onSubmit={handleSubmit(onSubmit, onError)} className="p-8 space-y-10">
             {msg.content && (
-              <div className={`p-4 rounded-lg ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+              <div className={`p-4 rounded-xl ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                 {msg.content}
               </div>
             )}
 
             {(isWeChatBrowser() || isSamsungBrowser()) && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 当前为 `{browserLabel}`。如果选择图片后页面重新加载，请优先改用安卓 Chrome；若在微信内打开，请点右上角选择“在浏览器打开”后再上传。
               </div>
             )}
@@ -1095,7 +1095,7 @@ UA: ${navigator.userAgent}`}
                 
                 {/* Address Search Field */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
                     地址 (省/市/区) <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -1113,7 +1113,7 @@ UA: ${navigator.userAgent}`}
                         setShowAddressList(true)
                       }}
                       placeholder="如：北京市"
-                      className="block w-full border border-gray-300 rounded-lg py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+                      className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)]"
                     />
                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
                       <Search size={18} />
@@ -1126,7 +1126,7 @@ UA: ${navigator.userAgent}`}
                     </div>
                   )}
                   {showAddressList && addressSearch && filteredAddresses.length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
+                    <ul className="absolute z-10 w-full bg-white border border-[var(--vercel-hairline)] rounded-md shadow-lg max-h-60 overflow-auto mt-1">
                       {filteredAddresses.map((addr, idx) => (
                         <li 
                           key={idx}
@@ -1135,7 +1135,7 @@ UA: ${navigator.userAgent}`}
                             setAddressSearch(addr)
                             setShowAddressList(false)
                           }}
-                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700"
+                          className="px-4 py-2 hover:bg-[var(--vercel-canvas-soft)] cursor-pointer text-sm text-[var(--vercel-body)]"
                         >
                           {addr}
                         </li>
@@ -1214,7 +1214,7 @@ UA: ${navigator.userAgent}`}
               <button
                 type="submit"
                 disabled={loading || uploading}
-                className="w-full bg-blue-600 text-white font-bold py-3.5 px-4 rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-lg"
+                className="w-full bg-[var(--vercel-ink)] text-white font-semibold py-3 px-4 rounded-full shadow-sm hover:bg-black focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:ring-offset-2 focus:ring-offset-[var(--vercel-canvas)] transition-colors text-base"
               >
                 {loading || uploading ? '提交中...' : (classId ? '提交并报名' : '保存档案')}
               </button>

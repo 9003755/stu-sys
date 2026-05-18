@@ -100,37 +100,28 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 relative">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+    <div className="min-h-screen flex flex-col items-center justify-center vercel-hero-bg py-12 px-4 sm:px-6 lg:px-8 relative">
+      <div className="max-w-md w-full space-y-8 vercel-card p-8">
         <div className="text-center">
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight text-[var(--vercel-ink)]">
             无人机培训学员注册系统
           </h1>
-          <div className="mt-4 text-sm text-gray-600 bg-blue-50 p-4 rounded-lg border border-blue-100 text-left space-y-2">
-            <p className="flex items-start">
-              <span className="mr-2">💡</span>
-              <span>学员资料自动按照UOM学员批量上传的格式打包下载，可直接上传UOM无重复工作</span>
-            </p>
-            <p className="flex items-start">
-              <span className="mr-2">📄</span>
-              <span>学员身份证正反面自动合并成pdf文件下载</span>
-            </p>
-            <p className="flex items-start">
-              <span className="mr-2">📱</span>
-              <span>手机端报名推荐使用系统浏览器、微信或 Chrome</span>
-            </p>
+          <div className="mt-4 rounded-xl border border-[var(--vercel-hairline)] bg-[var(--vercel-canvas-soft)] p-4 text-left text-sm text-[var(--vercel-body)] space-y-2">
+            <p>学员资料可按 UOM 批量上传格式导出，减少重复录入。</p>
+            <p>身份证正反面可自动合并为 PDF 统一下载。</p>
+            <p>手机端报名推荐使用系统浏览器、微信或 Chrome。</p>
           </div>
         </div>
 
         {/* Role Switcher */}
-        <div className="flex bg-gray-100 p-1 rounded-lg">
+        <div className="flex rounded-full border border-[var(--vercel-hairline)] bg-[var(--vercel-canvas-soft)] p-1">
           <button
             type="button"
             onClick={() => { setRole('student'); reset(); setErrorMsg(''); }}
-            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-md transition-all ${
+            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-full transition-all ${
               role === 'student' 
-                ? 'bg-white text-blue-600 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-[var(--vercel-ink)] text-white shadow-sm' 
+                : 'text-[var(--vercel-mute)] hover:text-[var(--vercel-ink)]'
             }`}
           >
             <User size={18} className="mr-2" />
@@ -139,10 +130,10 @@ export default function Login() {
           <button
             type="button"
             onClick={() => { setRole('admin'); reset(); setErrorMsg(''); }}
-            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-md transition-all ${
+            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-full transition-all ${
               role === 'admin' 
-                ? 'bg-white text-blue-600 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-[var(--vercel-ink)] text-white shadow-sm' 
+                : 'text-[var(--vercel-mute)] hover:text-[var(--vercel-ink)]'
             }`}
           >
             <ShieldCheck size={18} className="mr-2" />
@@ -159,7 +150,7 @@ export default function Login() {
           
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--vercel-body)] mb-1">
                 {role === 'admin' ? '管理员账号' : '邮箱地址'}
               </label>
               <input
@@ -167,19 +158,19 @@ export default function Login() {
                 type={role === 'admin' ? "text" : "email"}
                 autoComplete="email"
                 required
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="appearance-none block w-full px-3 py-2 border border-[var(--vercel-hairline)] rounded-md bg-white text-sm text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)] focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent"
                 placeholder={role === 'admin' ? "请输入管理员账号" : "请输入注册邮箱"}
                 {...register("email", { required: true })}
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">密码</label>
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--vercel-body)] mb-1">密码</label>
               <input
                 id="password"
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="appearance-none block w-full px-3 py-2 border border-[var(--vercel-hairline)] rounded-md bg-white text-sm text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)] focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent"
                 placeholder="请输入密码"
                 {...register("password", { required: true })}
               />
@@ -190,7 +181,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 transition-colors shadow-sm"
+              className="group relative w-full inline-flex items-center justify-center rounded-full bg-[var(--vercel-ink)] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:ring-offset-2 focus:ring-offset-[var(--vercel-canvas)] disabled:opacity-70"
             >
               {loading ? '验证中...' : (role === 'admin' ? '进入管理后台' : '登录系统')}
             </button>
@@ -199,7 +190,7 @@ export default function Login() {
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-4 right-4 text-xs text-gray-300 opacity-60 hover:opacity-100 transition-opacity">
+      <div className="absolute bottom-4 right-4 text-xs text-[var(--vercel-mute)] opacity-60 hover:opacity-100 transition-opacity">
         by 海边的飞行器
       </div>
     </div>
