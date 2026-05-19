@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAdminAuth } from '../contexts/AdminAuthContext'
 import { useForm } from 'react-hook-form'
 import { supabaseAdmin } from '../lib/supabase'
-import { User, ShieldCheck } from 'lucide-react'
+import { FileDown, FileText, Smartphone, User, ShieldCheck } from 'lucide-react'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -106,10 +106,30 @@ export default function Login() {
           <h1 className="text-3xl font-semibold tracking-tight text-[var(--vercel-ink)]">
             无人机培训学员注册系统
           </h1>
-          <div className="mt-4 rounded-xl border border-[var(--vercel-hairline)] bg-[var(--vercel-canvas-soft)] p-4 text-left text-sm text-[var(--vercel-body)] space-y-2">
-            <p>学员资料可按 UOM 批量上传格式导出，减少重复录入。</p>
-            <p>身份证正反面可自动合并为 PDF 统一下载。</p>
-            <p>手机端报名推荐使用系统浏览器、微信或 Chrome。</p>
+          <div className="mt-4 rounded-2xl border border-[var(--vercel-hairline)] bg-[var(--vercel-canvas-soft)] p-5 text-left">
+            <div className="inline-flex items-center rounded-full border border-[var(--vercel-hairline)] bg-white px-3 py-1 text-xs font-medium text-[var(--vercel-mute)]">
+              功能概览
+            </div>
+            <ul className="mt-4 space-y-3 text-sm text-[var(--vercel-body)]">
+              <li className="flex items-start gap-3">
+                <FileDown size={18} className="mt-0.5 text-[var(--vercel-ink)]" />
+                <span>
+                  <span className="font-medium text-[var(--vercel-ink)]">一键导出</span>：按 UOM 模板整理学员资料，支持打包下载。
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <FileText size={18} className="mt-0.5 text-[var(--vercel-ink)]" />
+                <span>
+                  <span className="font-medium text-[var(--vercel-ink)]">证件处理</span>：身份证正反面自动合并为 PDF，统一归档。
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Smartphone size={18} className="mt-0.5 text-[var(--vercel-ink)]" />
+                <span>
+                  <span className="font-medium text-[var(--vercel-ink)]">移动端优化</span>：推荐系统浏览器 / 微信 / Chrome，上传更稳定。
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
 
