@@ -58,6 +58,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
   const [downloadingData, setDownloadingData] = useState(false)
   const [classes, setClasses] = useState([])
   const [selectedIds, setSelectedIds] = useState(new Set())
+  const [exportCheckByEnrollmentId, setExportCheckByEnrollmentId] = useState({})
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('all') // all, pending, approved, rejected
@@ -174,12 +175,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
         }
       }
 
-      const enrollmentsWithCompleteness = enrollmentsWithEmail.map((enrollment) => ({
-        ...enrollment,
-        exportCheck: getEnrollmentCompleteness(enrollment),
-      }))
-
-      setEnrollments(enrollmentsWithCompleteness)
+      setEnrollments(enrollmentsWithEmail)
     } catch (error) {
       console.error('Error fetching enrollments:', error)
       alert('获取报名列表失败')
@@ -424,16 +420,23 @@ export default function EnrollmentManagement({ initialClassId = null }) {
     const selectedEnrollments = enrollments.filter(e => selectedIds.has(e.id))
     if (selectedEnrollments.length === 0) return
 
-    const incompleteEnrollments = selectedEnrollments.filter(
-      (enrollment) => !enrollment.exportCheck?.isComplete
-    )
+    const nextExportCheckByEnrollmentId = { ...exportCheckByEnrollmentId }
+    const incompleteEnrollments = []
+
+    selectedEnrollments.forEach((enrollment) => {
+      const check = getEnrollmentCompleteness(enrollment)
+      nextExportCheckByEnrollmentId[enrollment.id] = check
+      if (!check.isComplete) incompleteEnrollments.push({ enrollment, check })
+    })
+
+    setExportCheckByEnrollmentId(nextExportCheckByEnrollmentId)
 
     if (incompleteEnrollments.length > 0) {
       const previewList = incompleteEnrollments
         .slice(0, 5)
-        .map((enrollment) => {
+        .map(({ enrollment, check }) => {
           const name = enrollment.profiles?.real_name || enrollment.user_email || '未命名学员'
-          return `${name}（${enrollment.exportCheck?.summary || '资料不完整'}）`
+          return `${name}（${check.summary || '资料不完整'}）`
         })
         .join('\n')
 
@@ -643,12 +646,15 @@ export default function EnrollmentManagement({ initialClassId = null }) {
     return true
   })
 
-  const selectedIncompleteEnrollments = useMemo(
-    () => filteredEnrollments.filter(
-      (enrollment) => selectedIds.has(enrollment.id) && !enrollment.exportCheck?.isComplete
-    ),
-    [filteredEnrollments, selectedIds]
-  )
+  const selectedIncompleteEnrollments = useMemo(() => {
+    return filteredEnrollments
+      .filter((enrollment) => selectedIds.has(enrollment.id))
+      .filter((enrollment) => exportCheckByEnrollmentId[enrollment.id]?.isComplete === false)
+      .map((enrollment) => ({
+        enrollment,
+        check: exportCheckByEnrollmentId[enrollment.id],
+      }))
+  }, [filteredEnrollments, selectedIds, exportCheckByEnrollmentId])
 
   const [selectedProfile, setSelectedProfile] = useState(null)
 
@@ -899,9 +905,9 @@ export default function EnrollmentManagement({ initialClassId = null }) {
           {' '}
           {selectedIncompleteEnrollments
             .slice(0, 3)
-            .map((enrollment) => {
+            .map(({ enrollment, check }) => {
               const name = enrollment.profiles?.real_name || enrollment.user_email || '未命名学员'
-              return `${name}（${enrollment.exportCheck?.summary || '资料不完整'}）`
+              return `${name}（${check?.summary || '资料不完整'}）`
             })
             .join('；')}
           {selectedIncompleteEnrollments.length > 3 ? `；另外还有 ${selectedIncompleteEnrollments.length - 3} 位` : ''}
@@ -939,9 +945,12 @@ export default function EnrollmentManagement({ initialClassId = null }) {
               </tr>
             ) : (
               filteredEnrollments.map((item) => (
+                (() => {
+                  const exportCheck = exportCheckByEnrollmentId[item.id]
+                  return (
                 <tr
                   key={item.id}
-                  className={`hover:bg-gray-50 ${item.exportCheck?.isComplete ? '' : 'bg-amber-50/60'}`}
+                  className={`hover:bg-gray-50 ${exportCheck?.isComplete === false ? 'bg-amber-50/60' : ''}`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input 
@@ -976,7 +985,11 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                     <div className="text-xs text-gray-500">{item.profiles?.email_contact}</div>
                   </td>
                   <td className="px-6 py-4">
-                    {item.exportCheck?.isComplete ? (
+                    {exportCheck?.isComplete === undefined ? (
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
+                        未检查
+                      </span>
+                    ) : exportCheck?.isComplete ? (
                       <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">
                         资料完整
                       </span>
@@ -986,7 +999,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                           资料不全
                         </span>
                         <div className="max-w-xs text-xs text-amber-700">
-                          {item.exportCheck?.summary}
+                          {exportCheck?.summary}
                         </div>
                       </div>
                     )}
@@ -1042,6 +1055,8 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                     </button>
                   </td>
                 </tr>
+                  )
+                })()
               ))
             )}
           </tbody>
