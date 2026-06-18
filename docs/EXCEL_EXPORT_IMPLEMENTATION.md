@@ -1,5 +1,11 @@
 # Excel 导出功能开发文档
 
+## 变更记录
+
+- 2026-06-18
+  - 将 zip 内 Excel 文件名统一为 `stuIm.xlsx`
+  - 将压缩包目录结构从 `stuTemplate/stu/...` 调整为 `stu/...`
+
 ## 文档目的
 
 本文档用于整理当前“学员报名资料按固定格式导出 Excel”功能的现有实现，作为后续维护、排查和迭代的基础说明。
@@ -261,7 +267,7 @@ workbook.getWorksheet(1)
 当前 zip 中会额外创建图片目录：
 
 ```text
-stuTemplate/stu/stuPicture/
+stu/stuPicture/
 ```
 
 对于每条可导出的报名记录：
@@ -293,13 +299,12 @@ stuTemplate/stu/stuPicture/
 当前实现生成的 zip 内部目录结构为：
 
 ```text
-stuTemplate/
-  stu/
-    stuIm.xlsx
-    stuPicture/
-      证件号1.jpg
-      证件号2.png
-      ...
+stu/
+  stuIm.xlsx
+  stuPicture/
+    证件号1.jpg
+    证件号2.png
+    ...
 ```
 
 当前实现中，模板文件名与 zip 中最终写入的 Excel 文件名统一为 `stuIm.xlsx`。

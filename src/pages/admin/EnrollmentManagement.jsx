@@ -504,7 +504,8 @@ export default function EnrollmentManagement({ initialClassId = null }) {
       // We append rows.
       
       const zip = new JSZip()
-      const photoFolder = zip.folder("stuTemplate").folder("stu").folder("stuPicture")
+      const stuFolder = zip.folder("stu")
+      const photoFolder = stuFolder.folder("stuPicture")
       
       // Helper to load image
       const loadImage = async (url) => {
@@ -584,7 +585,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
 
       // 3. Save Excel
       const excelBuffer = await workbook.xlsx.writeBuffer()
-      zip.folder("stuTemplate").folder("stu").file("stuIm.xlsx", excelBuffer)
+      stuFolder.file("stuIm.xlsx", excelBuffer)
 
       // 4. Generate Zip and Download
       const zipContent = await zip.generateAsync({ type: 'blob' })
