@@ -584,7 +584,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
 
       // 3. Save Excel
       const excelBuffer = await workbook.xlsx.writeBuffer()
-      zip.folder("stuTemplate").folder("stu").file("stulm.xlsx", excelBuffer)
+      zip.folder("stuTemplate").folder("stu").file("stuIm.xlsx", excelBuffer)
 
       // 4. Generate Zip and Download
       const zipContent = await zip.generateAsync({ type: 'blob' })
