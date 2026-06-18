@@ -1,9 +1,55 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabaseAdmin } from '../../lib/supabase'
 import { Check, X, Search, Filter, Eye, Trash2, Download, FileSpreadsheet, KeyRound } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import JSZip from 'jszip'
 import ExcelJS from 'exceljs'
+
+const EXPORT_REQUIRED_PROFILE_FIELDS = [
+  ['real_name', '姓名'],
+  ['gender', '性别'],
+  ['id_type', '证件类型'],
+  ['id_number', '证件号码'],
+  ['nationality', '国籍'],
+  ['ethnicity', '民族'],
+  ['birth_date', '出生日期'],
+  ['region', '地址'],
+  ['contact_phone', '联系电话'],
+  ['postal_code', '邮政编码'],
+  ['address_detail', '详细地址'],
+  ['photo_url', '证件照'],
+]
+
+const hasValue = (value) => {
+  if (value === null || value === undefined) return false
+  return String(value).trim() !== ''
+}
+
+const getEnrollmentCompleteness = (enrollment) => {
+  const profile = enrollment?.profiles
+
+  if (!profile) {
+    return {
+      isComplete: false,
+      missingFields: ['学员档案'],
+      summary: '缺少学员档案',
+    }
+  }
+
+  const missingFields = EXPORT_REQUIRED_PROFILE_FIELDS
+    .filter(([fieldName]) => !hasValue(profile[fieldName]))
+    .map(([, label]) => label)
+
+  if (!hasValue(enrollment?.user_email) && !hasValue(profile.email_contact)) {
+    missingFields.push('邮箱')
+  }
+
+  return {
+    isComplete: missingFields.length === 0,
+    missingFields,
+    summary: missingFields.length === 0 ? '资料完整' : `缺少：${missingFields.join('、')}`,
+  }
+}
 
 export default function EnrollmentManagement({ initialClassId = null }) {
   const [enrollments, setEnrollments] = useState([])
@@ -128,7 +174,12 @@ export default function EnrollmentManagement({ initialClassId = null }) {
         }
       }
 
-      setEnrollments(enrollmentsWithEmail)
+      const enrollmentsWithCompleteness = enrollmentsWithEmail.map((enrollment) => ({
+        ...enrollment,
+        exportCheck: getEnrollmentCompleteness(enrollment),
+      }))
+
+      setEnrollments(enrollmentsWithCompleteness)
     } catch (error) {
       console.error('Error fetching enrollments:', error)
       alert('获取报名列表失败')
@@ -261,8 +312,6 @@ export default function EnrollmentManagement({ initialClassId = null }) {
         }
       }
 
-      let successCount = 0
-      
       for (const enrollment of selectedEnrollments) {
         const profile = enrollment.profiles
         if (!profile) continue
@@ -292,7 +341,6 @@ export default function EnrollmentManagement({ initialClassId = null }) {
           // Margins: 20mm
           // Target width: 150mm
           
-          const pageWidth = 210
           const margin = 30
           const imgWidth = 150
           
@@ -329,8 +377,6 @@ export default function EnrollmentManagement({ initialClassId = null }) {
 
           const blob = pdf.output('blob')
           pdfBlobs.push({ filename: `${name}身份证.pdf`, blob })
-          successCount++
-          
         } catch (err) {
           console.error(`Failed to process ${name}`, err)
         }
@@ -377,6 +423,27 @@ export default function EnrollmentManagement({ initialClassId = null }) {
     if (selectedIds.size === 0) return
     const selectedEnrollments = enrollments.filter(e => selectedIds.has(e.id))
     if (selectedEnrollments.length === 0) return
+
+    const incompleteEnrollments = selectedEnrollments.filter(
+      (enrollment) => !enrollment.exportCheck?.isComplete
+    )
+
+    if (incompleteEnrollments.length > 0) {
+      const previewList = incompleteEnrollments
+        .slice(0, 5)
+        .map((enrollment) => {
+          const name = enrollment.profiles?.real_name || enrollment.user_email || '未命名学员'
+          return `${name}（${enrollment.exportCheck?.summary || '资料不完整'}）`
+        })
+        .join('\n')
+
+      const suffix = incompleteEnrollments.length > 5
+        ? `\n\n其余 ${incompleteEnrollments.length - 5} 位学员也存在资料缺失。`
+        : ''
+
+      alert(`无法导出报名资料，存在 ${incompleteEnrollments.length} 位资料不完整的学员：\n\n${previewList}${suffix}`)
+      return
+    }
 
     setDownloadingData(true)
 
@@ -575,6 +642,13 @@ export default function EnrollmentManagement({ initialClassId = null }) {
 
     return true
   })
+
+  const selectedIncompleteEnrollments = useMemo(
+    () => filteredEnrollments.filter(
+      (enrollment) => selectedIds.has(enrollment.id) && !enrollment.exportCheck?.isComplete
+    ),
+    [filteredEnrollments, selectedIds]
+  )
 
   const [selectedProfile, setSelectedProfile] = useState(null)
 
@@ -819,6 +893,21 @@ export default function EnrollmentManagement({ initialClassId = null }) {
         </div>
       </div>
 
+      {selectedIncompleteEnrollments.length > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          已选中的 {selectedIncompleteEnrollments.length} 位学员资料不完整，无法导出报名资料：
+          {' '}
+          {selectedIncompleteEnrollments
+            .slice(0, 3)
+            .map((enrollment) => {
+              const name = enrollment.profiles?.real_name || enrollment.user_email || '未命名学员'
+              return `${name}（${enrollment.exportCheck?.summary || '资料不完整'}）`
+            })
+            .join('；')}
+          {selectedIncompleteEnrollments.length > 3 ? `；另外还有 ${selectedIncompleteEnrollments.length - 3} 位` : ''}
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -835,6 +924,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">学员账号</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申请班级</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系方式</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">资料状态</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申请时间</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
@@ -843,13 +933,16 @@ export default function EnrollmentManagement({ initialClassId = null }) {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredEnrollments.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-6 py-10 text-center text-gray-500">
+                <td colSpan="9" className="px-6 py-10 text-center text-gray-500">
                   没有找到符合条件的记录
                 </td>
               </tr>
             ) : (
               filteredEnrollments.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr
+                  key={item.id}
+                  className={`hover:bg-gray-50 ${item.exportCheck?.isComplete ? '' : 'bg-amber-50/60'}`}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input 
                       type="checkbox" 
@@ -881,6 +974,22 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{item.profiles?.contact_phone}</div>
                     <div className="text-xs text-gray-500">{item.profiles?.email_contact}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {item.exportCheck?.isComplete ? (
+                      <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">
+                        资料完整
+                      </span>
+                    ) : (
+                      <div className="space-y-1">
+                        <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
+                          资料不全
+                        </span>
+                        <div className="max-w-xs text-xs text-amber-700">
+                          {item.exportCheck?.summary}
+                        </div>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
