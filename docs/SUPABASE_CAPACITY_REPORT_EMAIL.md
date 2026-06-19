@@ -17,6 +17,32 @@
 - 每个班级的学生数量
 - 按 3 张图片/学员估算，剩余文件存储还能注册多少学员
 
+## 当前部署状态
+
+截至 `2026-06-19`，线上已完成以下部署与验证：
+
+- RPC `public.get_capacity_report_snapshot()` 已部署成功
+- Edge Function 在线资源实际 slug 为 `quick-actionsend-capacity-report`
+- 在线代码已恢复为本地 `Secrets` 版本，不再依赖硬编码发件参数
+- 已新增自定义 Secrets：
+  - `RESEND_API_KEY`
+  - `REPORT_FROM_EMAIL`
+- 已手动触发一次函数并成功发信到 `9003755@qq.com`
+- 已创建定时任务 `send-capacity-report-every-3-days`
+
+最近一次手动验证返回示例：
+
+```json
+{
+  "success": true,
+  "recipient": "9003755@qq.com",
+  "subject": "学员报名系统容量巡检报告 - 2026/6/19 15:11:21",
+  "resend": {
+    "id": "875c7b54-f5bf-46f4-a029-9b656432040d"
+  }
+}
+```
+
 ## 实现结构
 
 ### 数据库侧
@@ -67,6 +93,9 @@ supabase secrets set \
   - Pro 方案可填 `102400`
 - `REPORT_FROM_EMAIL`
   - 必须是 Resend 已验证域名下的发件地址
+  - 当前线上实际使用：`onboarding@resend.dev`
+- `REPORT_RECIPIENT_EMAIL`
+  - 当前线上实际使用：`9003755@qq.com`
 
 ## 部署 Edge Function
 
@@ -81,7 +110,7 @@ supabase functions deploy send-capacity-report
 ```bash
 curl -X POST \
   "https://<project-ref>.supabase.co/functions/v1/send-capacity-report" \
-  -H "Authorization: Bearer <service-role-key>" \
+  -H "Authorization: Bearer <anon-or-publishable-key>" \
   -H "Content-Type: application/json"
 ```
 
@@ -100,40 +129,58 @@ Supabase 官方支持使用 `pg_cron + pg_net + vault` 定时调用 Edge Functio
 
 - `pg_cron`
 - `pg_net`
-- `vault`
 
-### 2. 把项目地址和 service role key 存入 Vault
+注意：
+
+- 本项目线上环境中 `vault` 扩展不可用
+- 因此最终采用的是 `pg_cron + pg_net` 方案
+- 由于本函数只读取服务端 Secrets 并执行业务逻辑，定时任务使用项目 `anon key` 调用即可满足当前需求
+
+### 2. 创建定时任务
+
+线上实际部署使用的 cron 表达式为 `0 1 */3 * *`。
+
+说明：
+
+- Supabase 数据库时区按 UTC 处理
+- `01:00 UTC` 对应北京时间 `09:00`
+- 因此这条任务等价于“每 3 天北京时间上午 9 点执行一次”
 
 ```sql
-select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
-select vault.create_secret('<service-role-key>', 'service_role_key');
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+do $$
+begin
+  if exists (
+    select 1
+    from cron.job
+    where jobname = 'send-capacity-report-every-3-days'
+  ) then
+    perform cron.unschedule('send-capacity-report-every-3-days');
+  end if;
+end $$;
+
+select cron.schedule(
+  'send-capacity-report-every-3-days',
+  '0 1 */3 * *',
+  $$
+  select
+    net.http_post(
+      url := 'https://kmeybkqwicrdfksbagfz.supabase.co/functions/v1/send-capacity-report',
+      headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon-or-publishable-key>"}'::jsonb,
+      body := '{"source":"pg_cron","triggered_at":"scheduled"}'::jsonb
+    ) as request_id;
+  $$
+);
 ```
 
-### 3. 创建定时任务
-
-下面示例表示“每 3 天北京时间上午 9 点执行一次”。如果你项目数据库时区不是北京时间，请自行调整。
+### 3. 查询已创建任务
 
 ```sql
-select
-  cron.schedule(
-    'send-capacity-report-every-3-days',
-    '0 9 */3 * *',
-    $$
-    select
-      net.http_post(
-        url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
-          || '/functions/v1/send-capacity-report',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key')
-        ),
-        body := jsonb_build_object(
-          'source', 'pg_cron',
-          'triggered_at', now()
-        )
-      ) as request_id;
-    $$
-  );
+select jobid, jobname, schedule, command
+from cron.job
+where jobname = 'send-capacity-report-every-3-days';
 ```
 
 ## 当前口径说明
