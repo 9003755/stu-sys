@@ -5,6 +5,13 @@ import { jsPDF } from 'jspdf'
 import JSZip from 'jszip'
 import ExcelJS from 'exceljs'
 
+const EXAM_TYPE_OPTIONS = [
+  '多旋翼三类视距内',
+  '多旋翼三类超视距',
+  '多旋翼四类视距内',
+  '多旋翼四类超视距',
+]
+
 const EXPORT_REQUIRED_PROFILE_FIELDS = [
   ['real_name', '姓名'],
   ['gender', '性别'],
@@ -57,6 +64,9 @@ export default function EnrollmentManagement({ initialClassId = null }) {
   const [downloading, setDownloading] = useState(false)
   const [downloadingData, setDownloadingData] = useState(false)
   const [downloadingQuestionAccounts, setDownloadingQuestionAccounts] = useState(false)
+  const [editingExamTypeId, setEditingExamTypeId] = useState(null)
+  const [examTypeDraft, setExamTypeDraft] = useState('')
+  const [savingExamTypeId, setSavingExamTypeId] = useState(null)
   const [classes, setClasses] = useState([])
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [exportCheckByEnrollmentId, setExportCheckByEnrollmentId] = useState({})
@@ -202,6 +212,49 @@ export default function EnrollmentManagement({ initialClassId = null }) {
     } catch (error) {
       console.error('Error updating status:', error)
       alert('更新状态失败')
+    }
+  }
+
+  const handleStartExamTypeEdit = (enrollment) => {
+    setEditingExamTypeId(enrollment.id)
+    setExamTypeDraft(enrollment.exam_type || '')
+  }
+
+  const handleCancelExamTypeEdit = () => {
+    setEditingExamTypeId(null)
+    setExamTypeDraft('')
+  }
+
+  const handleUpdateExamType = async (enrollmentId) => {
+    if (!examTypeDraft) {
+      alert('请选择报考类型')
+      return
+    }
+
+    try {
+      setSavingExamTypeId(enrollmentId)
+
+      const { error } = await supabaseAdmin
+        .from('enrollments')
+        .update({ exam_type: examTypeDraft })
+        .eq('id', enrollmentId)
+
+      if (error) throw error
+
+      setEnrollments(enrollments.map((enrollment) => (
+        enrollment.id === enrollmentId
+          ? { ...enrollment, exam_type: examTypeDraft }
+          : enrollment
+      )))
+
+      setEditingExamTypeId(null)
+      setExamTypeDraft('')
+      alert('报考类型已更新')
+    } catch (error) {
+      console.error('Error updating exam type:', error)
+      alert('更新报考类型失败：' + error.message)
+    } finally {
+      setSavingExamTypeId(null)
     }
   }
 
@@ -1083,7 +1136,49 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                     <div className="text-xs text-gray-500">{item.profiles?.email_contact}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{item.exam_type || '-'}</div>
+                    {editingExamTypeId === item.id ? (
+                      <div className="min-w-[220px] space-y-2">
+                        <select
+                          value={examTypeDraft}
+                          onChange={(e) => setExamTypeDraft(e.target.value)}
+                          disabled={savingExamTypeId === item.id}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">请选择报考类型</option>
+                          {EXAM_TYPE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleUpdateExamType(item.id)}
+                            disabled={savingExamTypeId === item.id}
+                            className="inline-flex items-center rounded-md bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700 border border-green-200 hover:bg-green-100 disabled:opacity-50"
+                          >
+                            <Check size={14} className="mr-1" />
+                            {savingExamTypeId === item.id ? '保存中...' : '保存'}
+                          </button>
+                          <button
+                            onClick={handleCancelExamTypeEdit}
+                            disabled={savingExamTypeId === item.id}
+                            className="inline-flex items-center rounded-md bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-700 border border-gray-200 hover:bg-gray-100 disabled:opacity-50"
+                          >
+                            <X size={14} className="mr-1" />
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="min-w-[220px]">
+                        <div className="text-sm text-gray-900">{item.exam_type || '-'}</div>
+                        <button
+                          onClick={() => handleStartExamTypeEdit(item)}
+                          className="mt-1 text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          修改报考类型
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     {exportCheck?.isComplete === undefined ? (
