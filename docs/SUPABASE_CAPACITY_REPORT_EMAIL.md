@@ -109,7 +109,7 @@ supabase functions deploy send-capacity-report
 
 ```bash
 curl -X POST \
-  "https://<project-ref>.supabase.co/functions/v1/send-capacity-report" \
+  "https://<project-ref>.supabase.co/functions/v1/quick-actionsend-capacity-report" \
   -H "Authorization: Bearer <anon-or-publishable-key>" \
   -H "Content-Type: application/json"
 ```
@@ -167,13 +167,19 @@ select cron.schedule(
   $$
   select
     net.http_post(
-      url := 'https://kmeybkqwicrdfksbagfz.supabase.co/functions/v1/send-capacity-report',
+      url := 'https://kmeybkqwicrdfksbagfz.supabase.co/functions/v1/quick-actionsend-capacity-report',
       headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon-or-publishable-key>"}'::jsonb,
       body := '{"source":"pg_cron","triggered_at":"scheduled"}'::jsonb
     ) as request_id;
   $$
 );
 ```
+
+补充说明：
+
+- 2026-06-27 排查发现：`cron.job_run_details` 虽然显示任务成功调度，但 `net._http_response` 返回 `404 Requested function was not found`
+- 根因是定时任务 URL 仍指向 `send-capacity-report`，而线上实际可调用 endpoint 是 `quick-actionsend-capacity-report`
+- 线上已修复 cron URL，并用修复后的配置手动触发验证，HTTP 返回 `200`，邮件已成功发往 `9003755@qq.com`
 
 ### 3. 查询已创建任务
 

@@ -24,7 +24,7 @@ select cron.schedule(
   $$
   select
     net.http_post(
-      url := 'https://kmeybkqwicrdfksbagfz.supabase.co/functions/v1/send-capacity-report',
+      url := 'https://kmeybkqwicrdfksbagfz.supabase.co/functions/v1/quick-actionsend-capacity-report',
       headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon-or-publishable-key>"}'::jsonb,
       body := '{"source":"pg_cron","triggered_at":"scheduled"}'::jsonb
     ) as request_id;
