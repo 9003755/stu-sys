@@ -56,6 +56,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
   const [downloadingData, setDownloadingData] = useState(false)
+  const [downloadingQuestionAccounts, setDownloadingQuestionAccounts] = useState(false)
   const [classes, setClasses] = useState([])
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [exportCheckByEnrollmentId, setExportCheckByEnrollmentId] = useState({})
@@ -117,6 +118,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
           class_id,
           profile_id,
           user_id,
+          exam_type,
           classes (
             id,
             name
@@ -604,6 +606,92 @@ export default function EnrollmentManagement({ initialClassId = null }) {
     }
   }
 
+  const handleDownloadQuestionAccounts = async () => {
+    if (selectedIds.size === 0) return
+
+    const selectedEnrollments = enrollments.filter(e => selectedIds.has(e.id))
+    if (selectedEnrollments.length === 0) return
+
+    setDownloadingQuestionAccounts(true)
+
+    try {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('学员题库账号')
+
+      worksheet.columns = [
+        { header: '*账号', key: 'account', width: 22 },
+        { header: '*密码', key: 'password', width: 18 },
+        { header: '*姓名', key: 'name', width: 18 },
+        { header: '*部门', key: 'department', width: 26 },
+      ]
+
+      const headerRow = worksheet.getRow(1)
+      headerRow.height = 24
+      headerRow.eachCell((cell) => {
+        cell.font = {
+          bold: true,
+          size: 12,
+          name: 'Microsoft YaHei',
+        }
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+        }
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: '9DC3E6' },
+        }
+        cell.border = {
+          top: { style: 'thin', color: { argb: '7F7F7F' } },
+          left: { style: 'thin', color: { argb: '7F7F7F' } },
+          bottom: { style: 'thin', color: { argb: '7F7F7F' } },
+          right: { style: 'thin', color: { argb: '7F7F7F' } },
+        }
+      })
+
+      selectedEnrollments.forEach((enrollment) => {
+        worksheet.addRow({
+          account: enrollment.profiles?.contact_phone || '',
+          password: 'abc123456',
+          name: enrollment.profiles?.real_name || '',
+          department: enrollment.classes?.name || '',
+        })
+      })
+
+      worksheet.eachRow((row, rowNumber) => {
+        row.eachCell((cell) => {
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: rowNumber === 1 ? 'center' : 'left',
+          }
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'D9D9D9' } },
+            left: { style: 'thin', color: { argb: 'D9D9D9' } },
+            bottom: { style: 'thin', color: { argb: 'D9D9D9' } },
+            right: { style: 'thin', color: { argb: 'D9D9D9' } },
+          }
+        })
+      })
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = '学员题库账号.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Question accounts export error:', error)
+      alert('导出题库账号失败：' + error.message)
+    } finally {
+      setDownloadingQuestionAccounts(false)
+    }
+  }
+
   const toggleSelection = (id) => {
     const newSelected = new Set(selectedIds)
     if (newSelected.has(id)) {
@@ -881,6 +969,14 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                 {downloadingData ? '打包中...' : `下载报名资料 (${selectedIds.size})`}
               </button>
               <button
+                onClick={handleDownloadQuestionAccounts}
+                disabled={downloadingQuestionAccounts}
+                className="flex items-center px-3 py-2 bg-emerald-50 text-emerald-600 rounded-md hover:bg-emerald-100 transition-colors text-sm border border-emerald-200"
+              >
+                <FileSpreadsheet size={14} className="mr-1" />
+                {downloadingQuestionAccounts ? '导出中...' : `下载题库账号 (${selectedIds.size})`}
+              </button>
+              <button
                 onClick={handleDownloadIDs}
                 disabled={downloading}
                 className="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm border border-blue-200"
@@ -931,6 +1027,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">学员账号</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申请班级</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系方式</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报考类型</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">资料状态</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申请时间</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
@@ -940,7 +1037,7 @@ export default function EnrollmentManagement({ initialClassId = null }) {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredEnrollments.length === 0 ? (
               <tr>
-                <td colSpan="9" className="px-6 py-10 text-center text-gray-500">
+                <td colSpan="10" className="px-6 py-10 text-center text-gray-500">
                   没有找到符合条件的记录
                 </td>
               </tr>
@@ -984,6 +1081,9 @@ export default function EnrollmentManagement({ initialClassId = null }) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{item.profiles?.contact_phone}</div>
                     <div className="text-xs text-gray-500">{item.profiles?.email_contact}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{item.exam_type || '-'}</div>
                   </td>
                   <td className="px-6 py-4">
                     {exportCheck?.isComplete === undefined ? (

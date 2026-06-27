@@ -7,6 +7,12 @@ import { useNavigate } from 'react-router-dom'
 import { Upload, ChevronDown, Calendar, Search, Loader2, CheckCircle, XCircle } from 'lucide-react'
 
 const MAX_UPLOAD_SIZE = 15 * 1024 * 1024
+const EXAM_TYPE_OPTIONS = [
+  '多旋翼三类视距内',
+  '多旋翼三类超视距',
+  '多旋翼四类视距内',
+  '多旋翼四类超视距',
+]
 
 const isMobileBrowser = () => {
   if (typeof navigator === 'undefined') return false
@@ -196,7 +202,7 @@ const compressImage = (file) => {
               fileExt: 'jpg',
               contentType: 'image/jpeg'
             })
-          } catch (error) {
+          } catch {
             resolve({
               file: blob,
               fileExt: 'jpg',
@@ -491,21 +497,27 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
   const months = Array.from({ length: 12 }, (_, i) => i + 1)
 
   const dateValue = watch(name)
-  
-  const [year, setYear] = useState('')
-  const [month, setMonth] = useState('')
-  const [day, setDay] = useState('')
+  const parsedDateParts = useMemo(() => {
+    if (!dateValue) {
+      return { year: '', month: '', day: '' }
+    }
 
-  useEffect(() => {
-    if (dateValue) {
-      const date = new Date(dateValue)
-      if (!isNaN(date.getTime())) {
-        setYear(date.getFullYear())
-        setMonth(date.getMonth() + 1)
-        setDay(date.getDate())
-      }
+    const date = new Date(dateValue)
+    if (isNaN(date.getTime())) {
+      return { year: '', month: '', day: '' }
+    }
+
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
     }
   }, [dateValue])
+
+  const [dateParts, setDateParts] = useState({ year: '', month: '', day: '' })
+  const year = dateParts.year || parsedDateParts.year
+  const month = dateParts.month || parsedDateParts.month
+  const day = dateParts.day || parsedDateParts.day
 
   const daysInMonth = useMemo(() => {
     if (!year || !month) return 31
@@ -515,13 +527,17 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
   const updateDate = (newYear, newMonth, newDay) => {
-    if (newYear) setYear(newYear)
-    if (newMonth) setMonth(newMonth)
-    if (newDay) setDay(newDay)
+    const nextParts = {
+      year: newYear ?? year ?? '',
+      month: newMonth ?? month ?? '',
+      day: newDay ?? day ?? '',
+    }
 
-    const y = newYear || year
-    const m = newMonth || month
-    const d = newDay || day
+    setDateParts(nextParts)
+
+    const y = nextParts.year
+    const m = nextParts.month
+    const d = nextParts.day
 
     if (y && m && d) {
       const str = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
@@ -538,7 +554,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
         <div className="relative">
           <select
             value={year}
-            onChange={(e) => updateDate(Number(e.target.value), null, null)}
+            onChange={(e) => updateDate(e.target.value ? Number(e.target.value) : '', null, null)}
             className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
           >
             <option value="">年</option>
@@ -551,7 +567,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
         <div className="relative">
           <select
             value={month}
-            onChange={(e) => updateDate(null, Number(e.target.value), null)}
+            onChange={(e) => updateDate(null, e.target.value ? Number(e.target.value) : '', null)}
             className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
           >
             <option value="">月</option>
@@ -564,7 +580,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
         <div className="relative">
           <select
             value={day}
-            onChange={(e) => updateDate(null, null, Number(e.target.value))}
+            onChange={(e) => updateDate(null, null, e.target.value ? Number(e.target.value) : '')}
             className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
           >
             <option value="">日</option>
@@ -591,7 +607,8 @@ export default function StudentProfile({ classId, onSuccess }) {
       nationality: '中国',
       ethnicity: '',
       id_type: '身份证',
-      region: ''
+      region: '',
+      exam_type: '',
     }
   })
   
@@ -705,7 +722,7 @@ export default function StudentProfile({ classId, onSuccess }) {
 
     const getClassInfo = async () => {
       if (!classId) return
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('classes')
         .select('name')
         .eq('id', classId)
@@ -784,11 +801,13 @@ export default function StudentProfile({ classId, onSuccess }) {
     window.addEventListener('focus', handleFocus)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
+    const pageInstanceId = pageInstanceIdRef.current
+
     return () => {
       appendDebugLog({
         scope: 'page',
         action: 'unmount',
-        pageInstanceId: pageInstanceIdRef.current
+        pageInstanceId
       })
       window.removeEventListener('pageshow', handlePageShow)
       window.removeEventListener('pagehide', handlePageHide)
@@ -842,11 +861,6 @@ export default function StudentProfile({ classId, onSuccess }) {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [watch, user])
-
-  const uploadFile = async (file, path) => {
-    // Deprecated: Logic moved to ImageUpload component
-    return null
-  }
 
   const onSubmit = async (data) => {
     try {
@@ -911,7 +925,7 @@ export default function StudentProfile({ classId, onSuccess }) {
         // Check if already enrolled first to avoid error
         const { data: existing } = await supabase
           .from('enrollments')
-          .select('id')
+          .select('id, exam_type')
           .eq('user_id', user.id)
           .eq('class_id', classId)
           .single()
@@ -923,10 +937,18 @@ export default function StudentProfile({ classId, onSuccess }) {
               user_id: user.id,
               class_id: classId,
               profile_id: savedProfileId,
-              status: 'pending'
+              status: 'pending',
+              exam_type: data.exam_type,
             }])
           
           if (enrollError) throw enrollError
+        } else if (existing.exam_type !== data.exam_type) {
+          const { error: enrollUpdateError } = await supabase
+            .from('enrollments')
+            .update({ exam_type: data.exam_type })
+            .eq('id', existing.id)
+
+          if (enrollUpdateError) throw enrollUpdateError
         }
         
         // 提交成功，清除草稿
@@ -1022,7 +1044,7 @@ UA: ${navigator.userAgent}`}
                            } else {
                              alert('当前浏览器不支持复制，请手动截图日志')
                            }
-                         } catch (error) {
+                        } catch {
                            alert('复制失败，请手动截图日志')
                          }
                        }}
@@ -1073,6 +1095,31 @@ UA: ${navigator.userAgent}`}
                 <DateSelector label="出生日期" name="birth_date" required register={register} setValue={setValue} watch={watch} errors={errors} />
                 <SelectField label="国籍" name="nationality" options={NATIONS} required register={register} errors={errors} />
                 <SelectField label="民族" name="ethnicity" options={ETHNICITIES} required register={register} errors={errors} />
+                {classId && (
+                  <div>
+                    <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <label className="block text-sm font-medium text-[var(--vercel-body)]">
+                        报考类型 <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-xs text-[var(--vercel-mute)]">三类=小型；四类=中型</span>
+                    </div>
+                    <div className="relative">
+                      <select
+                        {...register('exam_type', { required: '报考类型不能为空' })}
+                        className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
+                      >
+                        <option value="">请选择</option>
+                        {EXAM_TYPE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+                        <ChevronDown size={18} />
+                      </div>
+                    </div>
+                    {errors.exam_type && <p className="text-red-500 text-xs mt-1">{errors.exam_type.message}</p>}
+                  </div>
+                )}
               </div>
             </section>
 
