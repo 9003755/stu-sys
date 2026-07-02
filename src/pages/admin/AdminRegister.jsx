@@ -80,14 +80,14 @@ export default function AdminRegister() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+    <div className="min-h-screen flex flex-col items-center justify-center vercel-hero-bg py-12 px-4 sm:px-6 lg:px-8">
+      <div className="login-shell max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-sm border border-[var(--ui-border)]">
         <div className="text-center">
           <Shield size={48} className="mx-auto text-blue-600 mb-4" />
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-3xl font-bold text-[var(--ui-title)] tracking-tight">
             普通管理员注册
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-[var(--ui-muted)]">
             创建新的管理员账号以管理班级和学员
           </p>
         </div>
@@ -105,7 +105,7 @@ export default function AdminRegister() {
               <input
                 type="text"
                 required
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="appearance-none block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="请输入您的真实姓名"
                 {...register("fullName", { required: "姓名不能为空" })}
               />
@@ -117,7 +117,7 @@ export default function AdminRegister() {
               <input
                 type="email"
                 required
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="appearance-none block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="作为登录账号"
                 {...register("email", { 
                   required: "邮箱不能为空",
@@ -135,7 +135,7 @@ export default function AdminRegister() {
               <input
                 type="password"
                 required
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="appearance-none block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="至少6位"
                 {...register("password", { 
                   required: "密码不能为空",
@@ -150,7 +150,7 @@ export default function AdminRegister() {
               <input
                 type="password"
                 required
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="appearance-none block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 placeholder="再次输入密码"
                 {...register("confirmPassword", { 
                   validate: (val) => {
@@ -168,7 +168,7 @@ export default function AdminRegister() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 transition-colors shadow-sm"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-[var(--ui-primary)] hover:bg-[var(--ui-primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 transition-colors shadow-sm"
             >
               <UserPlus size={18} className="mr-2" />
               {loading ? '注册中...' : '立即注册'}

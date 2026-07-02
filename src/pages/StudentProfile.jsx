@@ -250,11 +250,16 @@ const getUploadPayload = async (file) => {
 
 // UI Components - Defined OUTSIDE the main component to prevent re-mounting on every render
 const SectionTitle = ({ title }) => (
-  <div className="flex items-center mb-6">
-    <div className="h-5 w-1.5 bg-[var(--vercel-ink)] mr-3 rounded-full"></div>
-    <h3 className="text-base font-semibold tracking-tight text-[var(--vercel-ink)]">{title}</h3>
+  <div className="mb-6 flex items-center gap-3 border-b border-[var(--ui-border)] pb-4">
+    <div aria-hidden="true" className="h-7 w-1.5 rounded-full bg-[var(--ui-primary)]" />
+    <h3 className="text-base font-semibold tracking-tight text-[var(--ui-title)]">{title}</h3>
   </div>
 )
+
+const formLabelClass = "block text-sm font-semibold text-[var(--ui-text)] mb-1.5"
+const formControlClass = "block w-full rounded-lg border border-[var(--ui-border-strong)] bg-white px-3.5 py-2.5 text-sm text-[var(--ui-title)] placeholder-[var(--ui-subtle)] shadow-sm transition-colors focus:border-[var(--ui-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)]"
+const formSelectClass = `${formControlClass} appearance-none pr-10`
+const formErrorClass = "mt-1.5 text-xs font-medium text-red-600"
 
 const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, userId, fieldName }) => {
   const inputId = useId()
@@ -384,8 +389,8 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
   }
 
   return (
-    <div className={`relative border border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-colors min-h-[160px] 
-      ${error ? 'border-red-300 bg-red-50' : 'border-[var(--vercel-hairline)] bg-white hover:bg-[var(--vercel-canvas-soft)]'}`}>
+    <div className={`relative flex min-h-[180px] flex-col items-center justify-center rounded-xl border border-dashed p-5 text-center transition-colors
+      ${error ? 'border-red-300 bg-red-50' : 'border-blue-200 bg-blue-50/30 hover:border-blue-300 hover:bg-[var(--ui-primary-soft)]'}`}>
       
       {uploading ? (
         <div className="flex flex-col items-center text-blue-600">
@@ -413,7 +418,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
       ) : (
         <>
           <Upload className={`h-8 w-8 mb-2 ${error ? 'text-red-400' : 'text-gray-400'}`} />
-          <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+          <label className="block text-sm font-semibold text-[var(--vercel-ink)] mb-1 text-center">
             {label} <span className="text-red-500">*</span>
           </label>
           {uploadError ? (
@@ -424,7 +429,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
 
           <label
             htmlFor={inputId}
-            className="mt-1 inline-flex items-center justify-center rounded-full border border-[var(--vercel-hairline)] bg-white px-4 py-2 text-sm font-medium text-[var(--vercel-ink)] shadow-sm hover:bg-[var(--vercel-canvas-soft)]"
+            className="mt-2 inline-flex items-center justify-center rounded-full border border-[var(--vercel-hairline)] bg-white px-4 py-2 text-sm font-medium text-[var(--vercel-ink)] shadow-sm hover:bg-[var(--vercel-canvas-soft)]"
           >
             选择照片
           </label>
@@ -440,7 +445,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
       )}
       
       {error && !uploading && !previewUrl && (
-        <p className="text-red-500 text-xs mt-1 z-10 font-bold">{error.message}</p>
+        <p className="text-red-500 text-xs mt-2 z-10 font-bold">{error.message}</p>
       )}
     </div>
   )
@@ -448,7 +453,7 @@ const ImageUpload = ({ label, bucketPath, onUploadComplete, defaultUrl, error, u
 
 const InputField = ({ label, name, type = "text", placeholder, required = false, colSpan = 1, icon: Icon, register, errors }) => (
   <div className={`${colSpan === 2 ? 'col-span-1 md:col-span-2' : 'col-span-1'}`}>
-    <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
+    <label className={formLabelClass}>
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <div className="relative">
@@ -456,7 +461,7 @@ const InputField = ({ label, name, type = "text", placeholder, required = false,
         type={type}
         {...register(name, { required: required && `${label}不能为空` })}
         placeholder={placeholder}
-        className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)]"
+        className={formControlClass}
       />
       {Icon && (
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
@@ -464,19 +469,19 @@ const InputField = ({ label, name, type = "text", placeholder, required = false,
         </div>
       )}
     </div>
-    {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name].message}</p>}
+    {errors[name] && <p className={formErrorClass}>{errors[name].message}</p>}
   </div>
 )
 
 const SelectField = ({ label, name, options, required = false, register, errors }) => (
   <div>
-    <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
+    <label className={formLabelClass}>
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <div className="relative">
       <select
         {...register(name, { required: required && `${label}不能为空` })}
-        className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
+        className={formSelectClass}
       >
         <option value="">请选择</option>
         {options.map(opt => (
@@ -487,7 +492,7 @@ const SelectField = ({ label, name, options, required = false, register, errors 
         <ChevronDown size={18} />
       </div>
     </div>
-    {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name].message}</p>}
+    {errors[name] && <p className={formErrorClass}>{errors[name].message}</p>}
   </div>
 )
 
@@ -547,7 +552,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
 
   return (
     <div className="col-span-1 md:col-span-2">
-      <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
+      <label className={formLabelClass}>
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="grid grid-cols-3 gap-2">
@@ -555,7 +560,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
           <select
             value={year}
             onChange={(e) => updateDate(e.target.value ? Number(e.target.value) : '', null, null)}
-            className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
+            className={formSelectClass}
           >
             <option value="">年</option>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -568,7 +573,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
           <select
             value={month}
             onChange={(e) => updateDate(null, e.target.value ? Number(e.target.value) : '', null)}
-            className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
+            className={formSelectClass}
           >
             <option value="">月</option>
             {months.map(m => <option key={m} value={m}>{m}</option>)}
@@ -581,7 +586,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
           <select
             value={day}
             onChange={(e) => updateDate(null, null, e.target.value ? Number(e.target.value) : '')}
-            className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
+            className={formSelectClass}
           >
             <option value="">日</option>
             {days.map(d => <option key={d} value={d}>{d}</option>)}
@@ -592,7 +597,7 @@ const DateSelector = ({ label, name, required = false, register, setValue, watch
         </div>
       </div>
       <input type="hidden" {...register(name, { required: required && `${label}不能为空` })} />
-      {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name].message}</p>}
+      {errors[name] && <p className={formErrorClass}>{errors[name].message}</p>}
     </div>
   )
 }
@@ -996,20 +1001,23 @@ export default function StudentProfile({ classId, onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen vercel-hero-bg py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-semibold text-center text-[var(--vercel-ink)] mb-10 tracking-tight">
-          {classInfo ? (
-            <>
-              <span className="block text-sm font-medium text-[var(--vercel-body)] mb-2">您正在报名：{classInfo.name}</span>
-              完善资料以完成报名 <span className="text-xs text-[var(--vercel-mute)] font-normal ml-2">v1.2</span>
-            </>
-          ) : '学员档案 v1.2'}
-        </h1>
+    <div className="min-h-screen vercel-hero-bg px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6 rounded-xl border border-[var(--ui-border)] bg-white px-5 py-5 shadow-sm sm:px-7">
+          {classInfo && (
+            <p className="text-sm font-medium text-[var(--vercel-body)]">
+              您正在报名：{classInfo.name}
+            </p>
+          )}
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--ui-title)] sm:text-3xl">
+            {classInfo ? '完善资料以完成报名' : '学员档案'}
+            <span className="ml-2 align-middle text-xs font-normal text-[var(--vercel-mute)]">v1.2</span>
+          </h1>
+        </div>
         
-        <div className="vercel-card overflow-hidden">
+        <div className="vercel-card overflow-hidden rounded-xl">
           {showDebugPanel && (
-            <div className="px-8 pt-4 pb-0">
+            <div className="px-5 pt-4 pb-0 sm:px-8">
                <details className="text-xs text-gray-500">
                  <summary>调试日志</summary>
                  <div className="mt-2 space-y-2">
@@ -1073,7 +1081,7 @@ UA: ${navigator.userAgent}`}
                </details>
             </div>
           )}
-          <form onSubmit={handleSubmit(onSubmit, onError)} className="p-8 space-y-10">
+          <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6 bg-[var(--ui-surface)] p-4 sm:p-6 lg:p-8">
             {msg.content && (
               <div className={`p-4 rounded-xl ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                 {msg.content}
@@ -1087,9 +1095,9 @@ UA: ${navigator.userAgent}`}
             )}
 
             {/* Basic Info */}
-            <section>
+            <section className="rounded-xl border border-[var(--ui-border)] bg-white p-5 shadow-sm sm:p-6">
               <SectionTitle title="基本信息" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
                 <InputField label="姓名" name="real_name" placeholder="请输入姓名" required register={register} errors={errors} />
                 <SelectField label="性别" name="gender" options={['男', '女']} required register={register} errors={errors} />
                 <DateSelector label="出生日期" name="birth_date" required register={register} setValue={setValue} watch={watch} errors={errors} />
@@ -1098,7 +1106,7 @@ UA: ${navigator.userAgent}`}
                 {classId && (
                   <div>
                     <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <label className="block text-sm font-medium text-[var(--vercel-body)]">
+                      <label className={formLabelClass}>
                         报考类型 <span className="text-red-500">*</span>
                       </label>
                       <span className="text-xs text-[var(--vercel-mute)]">三类=小型；四类=中型</span>
@@ -1106,7 +1114,7 @@ UA: ${navigator.userAgent}`}
                     <div className="relative">
                       <select
                         {...register('exam_type', { required: '报考类型不能为空' })}
-                        className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)]"
+                        className={formSelectClass}
                       >
                         <option value="">请选择</option>
                         {EXAM_TYPE_OPTIONS.map((option) => (
@@ -1117,32 +1125,32 @@ UA: ${navigator.userAgent}`}
                         <ChevronDown size={18} />
                       </div>
                     </div>
-                    {errors.exam_type && <p className="text-red-500 text-xs mt-1">{errors.exam_type.message}</p>}
+                    {errors.exam_type && <p className={formErrorClass}>{errors.exam_type.message}</p>}
                   </div>
                 )}
               </div>
             </section>
 
             {/* ID Info */}
-            <section>
+            <section className="rounded-xl border border-[var(--ui-border)] bg-white p-5 shadow-sm sm:p-6">
               <SectionTitle title="证件信息" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
                 <SelectField label="证件类型" name="id_type" options={ID_TYPES} required register={register} errors={errors} />
                 <InputField label="证件号码" name="id_number" placeholder="请输入证件号码" required register={register} errors={errors} />
               </div>
             </section>
 
             {/* Contact Info */}
-            <section>
+            <section className="rounded-xl border border-[var(--ui-border)] bg-white p-5 shadow-sm sm:p-6">
               <SectionTitle title="联系方式" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
                 <InputField label="联系电话" name="contact_phone" placeholder="请输入11位手机号" required register={register} errors={errors} />
                 <InputField label="邮箱" name="email_contact" placeholder="example@email.com" required register={register} errors={errors} />
                 <InputField label="邮政编码" name="postal_code" placeholder="请输入邮政编码" required register={register} errors={errors} />
                 
                 {/* Address Search Field */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-[var(--vercel-body)] mb-1.5">
+                  <label className={formLabelClass}>
                     地址 (省/市/区) <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -1160,7 +1168,7 @@ UA: ${navigator.userAgent}`}
                         setShowAddressList(true)
                       }}
                       placeholder="如：北京市"
-                      className="block w-full border border-[var(--vercel-hairline)] rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:border-transparent text-sm bg-white text-[var(--vercel-ink)] placeholder-[var(--vercel-mute)]"
+                      className={`${formControlClass} pr-10`}
                     />
                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
                       <Search size={18} />
@@ -1168,12 +1176,12 @@ UA: ${navigator.userAgent}`}
                   </div>
                   {/* Custom Dropdown */}
                   {showAddressList && addressSearch && addressesLoading && (
-                    <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 px-4 py-2 text-sm text-gray-500">
+                    <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-500 shadow-lg">
                       地址加载中...
                     </div>
                   )}
                   {showAddressList && addressSearch && filteredAddresses.length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border border-[var(--vercel-hairline)] rounded-md shadow-lg max-h-60 overflow-auto mt-1">
+                    <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[var(--vercel-hairline)] bg-white py-1 shadow-lg">
                       {filteredAddresses.map((addr, idx) => (
                         <li 
                           key={idx}
@@ -1182,7 +1190,7 @@ UA: ${navigator.userAgent}`}
                             setAddressSearch(addr)
                             setShowAddressList(false)
                           }}
-                          className="px-4 py-2 hover:bg-[var(--vercel-canvas-soft)] cursor-pointer text-sm text-[var(--vercel-body)]"
+                          className="cursor-pointer px-4 py-2.5 text-sm text-[var(--vercel-body)] hover:bg-[var(--vercel-canvas-soft)]"
                         >
                           {addr}
                         </li>
@@ -1191,7 +1199,7 @@ UA: ${navigator.userAgent}`}
                   )}
                   {/* Hidden input to hold the actual form value for validation */}
                   <input type="hidden" {...register('region', { required: '地址不能为空' })} />
-                  {errors.region && <p className="text-red-500 text-xs mt-1">{errors.region.message}</p>}
+                  {errors.region && <p className={formErrorClass}>{errors.region.message}</p>}
                 </div>
 
                 <InputField label="详细地址" name="address_detail" placeholder="请输入详细地址（街道/门牌号）" required colSpan={2} register={register} errors={errors} />
@@ -1199,7 +1207,7 @@ UA: ${navigator.userAgent}`}
             </section>
 
              {/* Uploads */}
-             <section>
+             <section className="rounded-xl border border-[var(--ui-border)] bg-white p-5 shadow-sm sm:p-6">
               <SectionTitle title="资料上传" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* ID Front */}
@@ -1257,11 +1265,11 @@ UA: ${navigator.userAgent}`}
               </div>
              </section>
 
-            <div className="pt-6">
+            <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-[var(--vercel-hairline)] bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6 lg:-mx-8 lg:-mb-8 lg:px-8">
               <button
                 type="submit"
                 disabled={loading || uploading}
-                className="w-full bg-[var(--vercel-ink)] text-white font-semibold py-3 px-4 rounded-full shadow-sm hover:bg-black focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:ring-offset-2 focus:ring-offset-[var(--vercel-canvas)] transition-colors text-base"
+              className="w-full rounded-lg bg-[var(--ui-primary)] px-4 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-[var(--ui-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:ring-offset-2 focus:ring-offset-[var(--vercel-canvas)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {loading || uploading ? '提交中...' : (classId ? '提交并报名' : '保存档案')}
               </button>

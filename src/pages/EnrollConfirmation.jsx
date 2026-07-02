@@ -193,7 +193,7 @@ export default function EnrollConfirmation() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center vercel-hero-bg px-4 py-12">
-        <div className="max-w-md w-full vercel-card p-8">
+        <div className="login-shell max-w-md w-full vercel-card p-8">
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-[var(--vercel-ink)]">
               {authMode === 'login' ? '登录以继续报名' : '注册账号以报名'}
@@ -236,7 +236,7 @@ export default function EnrollConfirmation() {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full bg-[var(--vercel-ink)] text-white py-2.5 rounded-full hover:bg-black transition-colors disabled:opacity-50 text-sm font-medium"
+              className="w-full bg-[var(--ui-primary)] text-white py-3 rounded-lg hover:bg-[var(--ui-primary-hover)] transition-colors disabled:opacity-50 text-sm font-semibold"
             >
               {authLoading ? '处理中...' : (authMode === 'login' ? '登录' : '注册并登录')}
             </button>
@@ -312,13 +312,13 @@ export default function EnrollConfirmation() {
   if (enrollStatus === 'success') {
     return (
       <div className="min-h-screen flex items-center justify-center vercel-hero-bg px-4 py-12">
-        <div className="max-w-md w-full vercel-card p-8 text-center">
+        <div className="login-shell max-w-md w-full vercel-card p-8 text-center">
           <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
           <h2 className="text-2xl font-semibold mb-2 text-[var(--vercel-ink)]">报名成功</h2>
           <p className="text-[var(--vercel-body)] mb-6">已提交报名申请，请等待管理员审核。</p>
           <button 
             onClick={handleFinishAndLogout}
-            className="block w-full bg-[var(--vercel-ink)] text-white py-2.5 rounded-full hover:bg-black transition-colors font-medium"
+            className="block w-full bg-[var(--ui-primary)] text-white py-3 rounded-lg hover:bg-[var(--ui-primary-hover)] transition-colors font-semibold"
           >
             完成并退出
           </button>
@@ -329,7 +329,7 @@ export default function EnrollConfirmation() {
 
   return (
     <div className="min-h-screen vercel-hero-bg py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-lg mx-auto vercel-card overflow-hidden">
+      <div className="max-w-lg mx-auto vercel-card overflow-hidden rounded-xl">
         <div className="px-6 py-5 border-b border-[var(--vercel-hairline)]">
           <h1 className="text-lg font-semibold text-[var(--vercel-ink)] text-center">确认报名信息</h1>
         </div>
@@ -362,12 +362,12 @@ export default function EnrollConfirmation() {
                 <p className="text-xs opacity-75">当前账号: {user.email}</p>
               </div>
               <div className="space-y-3">
-                <Link to="/" className="block w-full bg-[var(--vercel-canvas-soft)] text-[var(--vercel-ink)] py-2.5 rounded-full hover:bg-[var(--vercel-canvas-soft-2)] border border-[var(--vercel-hairline)]">
+                <Link to="/" className="block w-full bg-[var(--vercel-canvas-soft)] text-[var(--vercel-ink)] py-2.5 rounded-lg hover:bg-[var(--vercel-canvas-soft-2)] border border-[var(--vercel-hairline)]">
                   返回首页
                 </Link>
                 <button 
                   onClick={handleFinishAndLogout}
-                  className="block w-full border border-red-200 text-red-600 bg-white py-2.5 rounded-full hover:bg-red-50 text-sm"
+                  className="block w-full border border-red-200 text-red-600 bg-white py-2.5 rounded-lg hover:bg-red-50 text-sm"
                 >
                   并非本人？切换账号/重新报名
                 </button>
@@ -376,7 +376,7 @@ export default function EnrollConfirmation() {
           ) : (
             <button
               onClick={handleEnroll}
-              className="w-full bg-[var(--vercel-ink)] text-white font-semibold py-3 px-4 rounded-full shadow-sm hover:bg-black transition-colors flex items-center justify-center"
+              className="w-full bg-[var(--ui-primary)] text-white font-semibold py-3 px-4 rounded-lg shadow-sm hover:bg-[var(--ui-primary-hover)] transition-colors flex items-center justify-center"
             >
               确认报名
             </button>

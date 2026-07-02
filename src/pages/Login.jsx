@@ -100,8 +100,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center vercel-hero-bg py-12 px-4 sm:px-6 lg:px-8 relative">
-      <div className="max-w-md w-full space-y-8 vercel-card p-8">
+    <div className="min-h-screen flex flex-col items-center justify-center vercel-hero-bg py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <div className="login-shell max-w-lg w-full space-y-8 vercel-card p-8 sm:p-10">
         <div className="text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-[var(--vercel-ink)]">
             无人机培训学员注册系统
@@ -134,13 +134,13 @@ export default function Login() {
         </div>
 
         {/* Role Switcher */}
-        <div className="flex rounded-full border border-[var(--vercel-hairline)] bg-[var(--vercel-canvas-soft)] p-1">
+        <div className="flex rounded-xl border border-[var(--vercel-hairline)] bg-[var(--vercel-canvas-soft)] p-1">
           <button
             type="button"
             onClick={() => { setRole('student'); reset(); setErrorMsg(''); }}
-            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-full transition-all ${
+            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-lg transition-all ${
               role === 'student' 
-                ? 'bg-[var(--vercel-ink)] text-white shadow-sm' 
+                ? 'bg-[var(--ui-primary)] text-white shadow-sm' 
                 : 'text-[var(--vercel-mute)] hover:text-[var(--vercel-ink)]'
             }`}
           >
@@ -150,9 +150,9 @@ export default function Login() {
           <button
             type="button"
             onClick={() => { setRole('admin'); reset(); setErrorMsg(''); }}
-            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-full transition-all ${
+            className={`flex-1 flex items-center justify-center py-2 text-sm font-medium rounded-lg transition-all ${
               role === 'admin' 
-                ? 'bg-[var(--vercel-ink)] text-white shadow-sm' 
+                ? 'bg-[var(--ui-primary)] text-white shadow-sm' 
                 : 'text-[var(--vercel-mute)] hover:text-[var(--vercel-ink)]'
             }`}
           >
@@ -201,7 +201,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full inline-flex items-center justify-center rounded-full bg-[var(--vercel-ink)] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:ring-offset-2 focus:ring-offset-[var(--vercel-canvas)] disabled:opacity-70"
+              className="group relative w-full inline-flex items-center justify-center rounded-lg bg-[var(--ui-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--ui-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--vercel-link)] focus:ring-offset-2 focus:ring-offset-[var(--vercel-canvas)] disabled:opacity-70"
             >
               {loading ? '验证中...' : (role === 'admin' ? '进入管理后台' : '登录系统')}
             </button>

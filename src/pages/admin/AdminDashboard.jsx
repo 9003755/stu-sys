@@ -48,70 +48,78 @@ export default function AdminDashboard() {
     setActiveTab('students')
   }
 
-  if (loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--ui-page)] text-[var(--ui-muted)] flex items-center justify-center">
+        Loading...
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 text-white font-bold text-xl mr-8">
-                报名系统管理后台
+    <div className="min-h-screen bg-[var(--ui-page)]">
+      <nav className="border-b border-[var(--ui-border)] bg-white/95 shadow-sm backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--ui-primary)] text-sm font-bold text-white">
+                  UAV
+                </div>
+                <div>
+                  <div className="text-base font-bold text-[var(--ui-title)] sm:text-lg">
+                    报名系统管理后台
+                  </div>
+                  <div className="text-xs text-[var(--ui-muted)]">班级、报名和学员资料管理</div>
+                </div>
               </div>
-              
-              {/* Admin Info Badge */}
+
               {adminProfile && (
-                <div className="flex items-center bg-gray-900 rounded-full px-4 py-1.5 mr-6 border border-gray-700">
-                  <div className="h-2 w-2 rounded-full bg-green-400 mr-2 animate-pulse"></div>
+                <div className="flex items-center rounded-lg border border-[var(--ui-border)] bg-[var(--ui-surface)] px-4 py-2">
+                  <div className="mr-2 h-2 w-2 rounded-full bg-green-500"></div>
                   <div className="flex flex-col">
-                    <span className="text-xs text-gray-400">当前登录</span>
-                    <span className="text-sm font-medium text-white leading-none">
-                      {adminProfile.full_name || '管理员'} 
-                      <span className="text-gray-500 ml-2 font-normal text-xs">({adminUser?.email})</span>
+                    <span className="text-xs text-[var(--ui-muted)]">当前登录</span>
+                    <span className="text-sm font-medium leading-none text-[var(--ui-title)]">
+                      {adminProfile.full_name || '管理员'}
+                      <span className="ml-2 text-xs font-normal text-[var(--ui-muted)]">({adminUser?.email})</span>
                     </span>
                   </div>
                 </div>
               )}
 
-              <div className="hidden md:block">
-                <div className="ml-10 flex items-baseline space-x-4">
-                  <button 
-                    onClick={() => setActiveTab('classes')}
-                    className={`${activeTab === 'classes' ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} px-3 py-2 rounded-md text-sm font-medium`}
-                  >
-                    班级管理
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('students')}
-                    className={`${activeTab === 'students' ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} px-3 py-2 rounded-md text-sm font-medium`}
-                  >
-                    学员列表
-                  </button>
-                </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveTab('classes')}
+                  className={`${activeTab === 'classes' ? 'bg-[var(--ui-primary)] text-white' : 'text-[var(--ui-muted)] hover:bg-[var(--ui-primary-soft)] hover:text-[var(--ui-primary)]'} rounded-md px-3 py-2 text-sm font-medium transition-colors`}
+                >
+                  班级管理
+                </button>
+                <button
+                  onClick={() => setActiveTab('students')}
+                  className={`${activeTab === 'students' ? 'bg-[var(--ui-primary)] text-white' : 'text-[var(--ui-muted)] hover:bg-[var(--ui-primary-soft)] hover:text-[var(--ui-primary)]'} rounded-md px-3 py-2 text-sm font-medium transition-colors`}
+                >
+                  学员列表
+                </button>
               </div>
             </div>
-            <div>
-              <button 
-                onClick={handleLogout}
-                className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-              >
-                退出登录
-              </button>
-            </div>
+
+            <button
+              onClick={handleLogout}
+              className="rounded-md px-3 py-2 text-sm font-medium text-[var(--ui-muted)] transition-colors hover:bg-[var(--ui-danger-bg)] hover:text-[var(--ui-danger)]"
+            >
+              退出登录
+            </button>
           </div>
         </div>
       </nav>
 
       <main>
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            {activeTab === 'classes' ? (
-              <ClassManagement onViewStudents={handleViewClassStudents} />
-            ) : (
-              <EnrollmentManagement initialClassId={selectedClassId} />
-            )}
-          </div>
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          {activeTab === 'classes' ? (
+            <ClassManagement onViewStudents={handleViewClassStudents} />
+          ) : (
+            <EnrollmentManagement initialClassId={selectedClassId} />
+          )}
         </div>
       </main>
     </div>

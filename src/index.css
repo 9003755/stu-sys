@@ -1,20 +1,44 @@
 @import "tailwindcss";
 
 :root {
-  --vercel-primary: #171717;
+  --vercel-primary: #1d4ed8;
   --vercel-on-primary: #ffffff;
-  --vercel-ink: #171717;
-  --vercel-body: #4d4d4d;
-  --vercel-mute: #888888;
-  --vercel-hairline: #ebebeb;
-  --vercel-hairline-strong: #a1a1a1;
+  --vercel-ink: #0f172a;
+  --vercel-body: #334155;
+  --vercel-mute: #64748b;
+  --vercel-hairline: #e2e8f0;
+  --vercel-hairline-strong: #cbd5e1;
   --vercel-canvas: #ffffff;
-  --vercel-canvas-soft: #fafafa;
-  --vercel-canvas-soft-2: #f5f5f5;
-  --vercel-link: #0070f3;
-  --vercel-link-deep: #0761d1;
-  --vercel-error: #ee0000;
-  --vercel-warning: #f5a623;
+  --vercel-canvas-soft: #f8fafc;
+  --vercel-canvas-soft-2: #f1f5f9;
+  --vercel-link: #1d4ed8;
+  --vercel-link-deep: #1e40af;
+  --vercel-error: #dc2626;
+  --vercel-warning: #d97706;
+  --ui-primary: #1d4ed8;
+  --ui-primary-hover: #1e40af;
+  --ui-primary-soft: #eff6ff;
+  --ui-cyan: #0891b2;
+  --ui-page: #f6f8fb;
+  --ui-card: #ffffff;
+  --ui-surface: #f8fafc;
+  --ui-border: #e2e8f0;
+  --ui-border-strong: #cbd5e1;
+  --ui-title: #0f172a;
+  --ui-text: #334155;
+  --ui-muted: #64748b;
+  --ui-subtle: #94a3b8;
+  --ui-success: #16a34a;
+  --ui-success-bg: #f0fdf4;
+  --ui-warning: #d97706;
+  --ui-warning-bg: #fffbeb;
+  --ui-danger: #dc2626;
+  --ui-danger-bg: #fef2f2;
+  --ui-radius-sm: 6px;
+  --ui-radius-md: 8px;
+  --ui-radius-lg: 12px;
+  --ui-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ui-shadow-modal: 0 16px 40px rgba(15, 23, 42, 0.18);
 }
 
 html,
@@ -24,10 +48,12 @@ body,
 }
 
 body {
-  background: var(--vercel-canvas);
+  background: var(--ui-page);
   color: var(--vercel-ink);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji",
     "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
@@ -45,16 +71,509 @@ a:hover {
 
 .vercel-hero-bg {
   background:
-    radial-gradient(900px 520px at 15% 5%, rgba(0, 223, 216, 0.16), transparent 60%),
-    radial-gradient(900px 520px at 85% 0%, rgba(121, 40, 202, 0.12), transparent 55%),
-    radial-gradient(1100px 640px at 50% -10%, rgba(0, 124, 240, 0.18), transparent 60%),
-    radial-gradient(900px 520px at 70% 25%, rgba(255, 0, 128, 0.12), transparent 55%),
-    linear-gradient(var(--vercel-canvas), var(--vercel-canvas));
+    linear-gradient(180deg, rgba(239, 246, 255, 0.88), rgba(246, 248, 251, 0.96) 42%, var(--ui-page)),
+    linear-gradient(135deg, rgba(29, 78, 216, 0.08), rgba(8, 145, 178, 0.06));
 }
 
 .vercel-card {
   background: var(--vercel-canvas);
   border: 1px solid var(--vercel-hairline);
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-shadow-card);
+}
+
+/* Aviation SaaS UI refresh: visual overrides only. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  color: var(--ui-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ui-subtle);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--ui-primary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
+  outline: none !important;
+}
+
+.bg-gray-100,
+.bg-gray-50 {
+  background-color: var(--ui-page) !important;
+}
+
+.bg-gray-900.text-gray-100,
+.min-h-screen.bg-gray-900 {
+  background-color: var(--ui-page) !important;
+  color: var(--ui-text) !important;
+}
+
+.bg-gray-800 {
+  background-color: var(--ui-card) !important;
+}
+
+.bg-gray-900\/30,
+.bg-gray-900\/50,
+.bg-gray-750,
+.bg-gray-700\/50 {
+  background-color: var(--ui-surface) !important;
+}
+
+.border-gray-700,
+.border-gray-600,
+.divide-gray-700 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--ui-border) !important;
+}
+
+.shadow-xl,
+.shadow-2xl,
+.shadow-lg,
+.shadow-md,
+.shadow {
+  box-shadow: var(--ui-shadow-card) !important;
+}
+
+.rounded-xl {
+  border-radius: var(--ui-radius-lg) !important;
+}
+
+.rounded-lg,
+.rounded-md {
+  border-radius: var(--ui-radius-md) !important;
+}
+
+.text-gray-900,
+.text-gray-800 {
+  color: var(--ui-title) !important;
+}
+
+.text-white {
+  color: #fff !important;
+}
+
+.text-gray-700,
+.text-gray-600,
+.text-gray-300 {
+  color: var(--ui-text) !important;
+}
+
+.text-gray-500,
+.text-gray-400 {
+  color: var(--ui-muted) !important;
+}
+
+.bg-gray-800 .text-white,
+.bg-gray-900 .text-white {
+  color: var(--ui-title) !important;
+}
+
+.bg-blue-600,
+.bg-blue-700,
+.bg-gray-900 {
+  background-color: var(--ui-primary) !important;
+}
+
+.hover\:bg-blue-700:hover,
+.hover\:bg-black:hover,
+.hover\:bg-gray-700:hover {
+  background-color: var(--ui-primary-hover) !important;
+}
+
+.bg-blue-600.text-white,
+.bg-blue-700.text-white,
+.bg-gray-900.text-white,
+button.bg-blue-600,
+button.bg-gray-900,
+button.bg-red-600,
+button.bg-yellow-600,
+button.bg-green-600 {
+  color: #fff !important;
+}
+
+.bg-red-600 {
+  background-color: var(--ui-danger) !important;
+}
+
+.bg-yellow-600 {
+  background-color: var(--ui-warning) !important;
+}
+
+.bg-green-50,
+.bg-emerald-50 {
+  background-color: var(--ui-success-bg) !important;
+}
+
+.bg-blue-50 {
+  background-color: var(--ui-primary-soft) !important;
+}
+
+.bg-red-50 {
+  background-color: var(--ui-danger-bg) !important;
+}
+
+.bg-yellow-50,
+.bg-amber-50 {
+  background-color: var(--ui-warning-bg) !important;
+}
+
+.text-blue-600,
+.text-blue-500,
+.text-blue-400 {
+  color: var(--ui-primary) !important;
+}
+
+.text-green-600,
+.text-green-500,
+.text-emerald-600 {
+  color: var(--ui-success) !important;
+}
+
+.text-red-600,
+.text-red-500,
+.text-red-400 {
+  color: var(--ui-danger) !important;
+}
+
+.text-yellow-600,
+.text-yellow-500,
+.text-amber-800 {
+  color: var(--ui-warning) !important;
+}
+
+.border-blue-600,
+.border-blue-500,
+.border-blue-200 {
+  border-color: #bfdbfe !important;
+}
+
+.border-red-200,
+.border-red-500,
+.border-red-900\/50 {
+  border-color: #fecaca !important;
+}
+
+.border-yellow-700\/50,
+.border-amber-200 {
+  border-color: #fde68a !important;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+thead,
+.bg-gray-750,
+thead.bg-gray-50,
+thead.bg-gray-900\/50 {
+  background-color: var(--ui-surface) !important;
+}
+
+tbody.bg-gray-800,
+tbody.bg-white {
+  background-color: var(--ui-card) !important;
+}
+
+tr:hover,
+.hover\:bg-gray-50:hover,
+.hover\:bg-gray-750:hover,
+.hover\:bg-gray-700\/50:hover {
+  background-color: #fbfdff !important;
+}
+
+th {
+  color: #475569 !important;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+td {
+  color: var(--ui-text);
+}
+
+.fixed .bg-gray-800,
+.fixed .bg-white {
+  background-color: var(--ui-card) !important;
+  box-shadow: var(--ui-shadow-modal) !important;
+}
+
+.min-h-screen.bg-gray-900,
+.min-h-screen.bg-gray-100,
+.min-h-screen.bg-gray-50 {
+  background-color: var(--ui-page) !important;
+}
+
+.login-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.login-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--ui-primary), var(--ui-cyan));
+}
+
+.login-shell h1 {
+  letter-spacing: -0.02em;
+}
+
+.login-shell input {
+  min-height: 42px;
+  border-color: var(--ui-border-strong) !important;
+  border-radius: var(--ui-radius-md) !important;
+}
+
+.bg-white.shadow,
+.bg-white.shadow-sm,
+.bg-white.shadow-lg,
+.bg-white.rounded-lg,
+.bg-white.rounded-xl {
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-shadow-card) !important;
+}
+
+button[class*="px-3"][class*="py-2"],
+button[class*="px-4"][class*="py-2"] {
+  border-radius: var(--ui-radius-sm);
+}
+
+input[class*="border-gray-300"],
+select[class*="border-gray-300"],
+textarea[class*="border-gray-300"] {
+  border-color: var(--ui-border-strong) !important;
+  background-color: #fff !important;
+}
+
+thead th {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #eef2f7 !important;
+}
+
+.bg-black,
+.bg-black\/70,
+.bg-black\/50 {
+  background-color: rgba(15, 23, 42, 0.56) !important;
+}
+
+/* Real admin pages: normalize existing Tailwind-heavy screens without changing business JSX. */
+.bg-white.shadow.rounded-lg.p-6,
+.bg-white.shadow.rounded-lg,
+.bg-gray-800.rounded-xl,
+.bg-gray-800.rounded-lg {
+  border: 1px solid var(--ui-border) !important;
+  background-color: var(--ui-card) !important;
+  border-radius: var(--ui-radius-lg) !important;
+  box-shadow: var(--ui-shadow-card) !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 > .flex:first-child {
+  border-bottom: 1px solid var(--ui-border);
+  margin: -1.5rem -1.5rem 1.25rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.bg-white.shadow.rounded-lg.p-6 > .flex:first-child h2,
+.bg-white.shadow.rounded-lg.p-6 h2,
+.bg-white.shadow.rounded-lg.p-6 h3 {
+  color: var(--ui-title) !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 table,
+.bg-gray-800.rounded-xl table {
+  font-size: 14px;
+}
+
+.bg-white.shadow.rounded-lg.p-6 th,
+.bg-gray-800.rounded-xl th,
+.bg-gray-800.rounded-lg th {
+  background: var(--ui-surface) !important;
+  color: #475569 !important;
+  font-weight: 700 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 td,
+.bg-gray-800.rounded-xl td,
+.bg-gray-800.rounded-lg td {
+  border-color: #eef2f7 !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 .text-gray-900,
+.bg-gray-800.rounded-xl .text-white,
+.bg-gray-800.rounded-lg .text-white {
+  color: var(--ui-title) !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 .text-gray-500,
+.bg-gray-800.rounded-xl .text-gray-500,
+.bg-gray-800.rounded-lg .text-gray-500 {
+  color: var(--ui-muted) !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 button.bg-blue-600,
+.bg-white.shadow.rounded-lg.p-6 button.bg-green-600,
+.bg-white.shadow.rounded-lg.p-6 button.bg-red-600 {
+  min-height: 36px;
+  border-radius: var(--ui-radius-sm);
+  font-weight: 600;
+}
+
+.bg-white.shadow.rounded-lg.p-6 button.text-blue-600,
+.bg-white.shadow.rounded-lg.p-6 button.text-indigo-600,
+.bg-white.shadow.rounded-lg.p-6 button.text-red-600,
+.bg-white.shadow.rounded-lg.p-6 button.text-blue-500,
+.bg-white.shadow.rounded-lg.p-6 button.text-red-500 {
+  display: inline-flex;
+  min-height: 30px;
+  min-width: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ui-radius-sm);
+}
+
+.bg-white.shadow.rounded-lg.p-6 button.text-blue-600,
+.bg-white.shadow.rounded-lg.p-6 button.text-indigo-600,
+.bg-white.shadow.rounded-lg.p-6 button.text-blue-500 {
+  color: var(--ui-primary) !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 button.text-blue-600:hover,
+.bg-white.shadow.rounded-lg.p-6 button.text-indigo-600:hover,
+.bg-white.shadow.rounded-lg.p-6 button.text-blue-500:hover {
+  background-color: var(--ui-primary-soft) !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 button.text-red-600,
+.bg-white.shadow.rounded-lg.p-6 button.text-red-500 {
+  color: var(--ui-danger) !important;
+}
+
+.bg-white.shadow.rounded-lg.p-6 button.text-red-600:hover,
+.bg-white.shadow.rounded-lg.p-6 button.text-red-500:hover {
+  background-color: var(--ui-danger-bg) !important;
+}
+
+.bg-white.rounded-lg.p-8,
+.bg-white.rounded-lg.max-w-4xl,
+.bg-gray-800.rounded-lg.max-w-4xl,
+.bg-gray-800.rounded-lg.max-w-md,
+.bg-gray-800.rounded-lg.max-w-2xl {
+  border: 1px solid var(--ui-border) !important;
+  background-color: #fff !important;
+  border-radius: var(--ui-radius-lg) !important;
+  box-shadow: var(--ui-shadow-modal) !important;
+}
+
+.bg-white.rounded-lg.p-8 h3,
+.bg-white.rounded-lg.max-w-4xl h3,
+.bg-gray-800.rounded-lg.max-w-4xl h3,
+.bg-gray-800.rounded-lg.max-w-md h3,
+.bg-gray-800.rounded-lg.max-w-2xl h3 {
+  color: var(--ui-title) !important;
+}
+
+.bg-white.rounded-lg.p-8 label,
+.bg-gray-800.rounded-lg.max-w-md label {
+  color: var(--ui-text) !important;
+}
+
+/* Super admin real pages: convert legacy dark console styling to the approved light SaaS style. */
+.min-h-screen.bg-gray-900.text-gray-100.p-6,
+.min-h-screen.bg-gray-900.text-gray-100,
+.min-h-screen.bg-gray-900 {
+  background: var(--ui-page) !important;
+  color: var(--ui-text) !important;
+}
+
+header.bg-gray-800 {
+  border-bottom: 1px solid var(--ui-border) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: var(--ui-shadow-card) !important;
+  backdrop-filter: blur(10px);
+}
+
+header.bg-gray-800 h1,
+.min-h-screen.bg-gray-900 h1,
+.min-h-screen.bg-gray-900 h2,
+.min-h-screen.bg-gray-900 h3 {
+  color: var(--ui-title) !important;
+}
+
+.min-h-screen.bg-gray-900 .text-gray-100,
+.min-h-screen.bg-gray-900 .text-gray-300,
+.min-h-screen.bg-gray-900 .text-white {
+  color: var(--ui-title) !important;
+}
+
+.min-h-screen.bg-gray-900 .text-gray-400,
+.min-h-screen.bg-gray-900 .text-gray-500 {
+  color: var(--ui-muted) !important;
+}
+
+.min-h-screen.bg-gray-900 input,
+.min-h-screen.bg-gray-900 select,
+.min-h-screen.bg-gray-900 textarea {
+  background-color: #fff !important;
+  border-color: var(--ui-border-strong) !important;
+  color: var(--ui-text) !important;
+}
+
+.min-h-screen.bg-gray-900 .bg-gray-800,
+.min-h-screen.bg-gray-900 .bg-gray-900\/50,
+.min-h-screen.bg-gray-900 .bg-gray-900\/30 {
+  background-color: #fff !important;
+}
+
+.min-h-screen.bg-gray-900 .divide-gray-700 > :not([hidden]) ~ :not([hidden]),
+.min-h-screen.bg-gray-900 .border-gray-700,
+.min-h-screen.bg-gray-900 .border-gray-600 {
+  border-color: var(--ui-border) !important;
+}
+
+.min-h-screen.bg-gray-900 .bg-green-900\/30,
+.min-h-screen.bg-gray-900 .bg-green-100 {
+  background-color: var(--ui-success-bg) !important;
+}
+
+.min-h-screen.bg-gray-900 .bg-red-900\/30,
+.min-h-screen.bg-gray-900 .bg-red-100 {
+  background-color: var(--ui-danger-bg) !important;
+}
+
+.min-h-screen.bg-gray-900 .text-green-400,
+.min-h-screen.bg-gray-900 .text-green-800 {
+  color: var(--ui-success) !important;
+}
+
+.min-h-screen.bg-gray-900 .text-red-400,
+.min-h-screen.bg-gray-900 .text-red-800 {
+  color: var(--ui-danger) !important;
+}
+
+.min-h-screen.bg-gray-900 .text-blue-400,
+.min-h-screen.bg-gray-900 .text-blue-500 {
+  color: var(--ui-primary) !important;
 }
