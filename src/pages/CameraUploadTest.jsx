@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, CheckCircle2, ImagePlus, RotateCcw, ScanLine, X } from 'lucide-react'
+import { Camera, CheckCircle2, Download, ImagePlus, RotateCcw, ScanLine, X } from 'lucide-react'
 
 const cropToA4 = (file) => new Promise((resolve, reject) => {
   const image = new Image()
@@ -52,14 +52,14 @@ const cropToA4 = (file) => new Promise((resolve, reject) => {
   image.src = sourceUrl
 })
 
-function ImagePreview({ file, alt }) {
+function ImagePreview({ file, alt, className = '' }) {
   const url = useMemo(() => URL.createObjectURL(file), [file])
 
   useEffect(() => {
     return () => URL.revokeObjectURL(url)
   }, [url])
 
-  return <img src={url} alt={alt} className="mt-4 aspect-[1/1.414] w-full rounded border object-cover" />
+  return <img src={url} alt={alt} className={className} />
 }
 
 function CameraModal({ title, onClose, onCapture }) {
@@ -95,7 +95,8 @@ function CameraModal({ title, onClose, onCapture }) {
     canvas.getContext('2d').drawImage(video, 0, 0)
     canvas.toBlob(async (blob) => {
       if (!blob) return
-      onCapture(await cropToA4(new File([blob], 'camera.jpg', { type: 'image/jpeg' })))
+      const original = new File([blob], 'camera-original.jpg', { type: 'image/jpeg' })
+      onCapture({ original, cropped: await cropToA4(original) })
     }, 'image/jpeg', 0.95)
   }
 
@@ -134,7 +135,16 @@ function DocumentCard({ title, value, onChange, onOpenCamera }) {
 
   const selectFile = async (file) => {
     if (!file?.type.startsWith('image/')) return
-    onChange(await cropToA4(file))
+    onChange({ original: file, cropped: await cropToA4(file) })
+  }
+
+  const downloadCropped = () => {
+    const url = URL.createObjectURL(value.cropped)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${title}-A4裁切效果.jpg`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -147,7 +157,21 @@ function DocumentCard({ title, value, onChange, onOpenCamera }) {
         {value ? <button type="button" onClick={() => onChange(null)} className="text-sm text-[var(--ui-primary)]">重新选择</button> : null}
       </div>
       {value ? (
-        <ImagePreview file={value} alt={`${title}预览`} />
+        <div className="mt-4">
+          <div className="grid grid-cols-2 gap-3">
+            <figure>
+              <figcaption className="mb-2 text-center text-xs font-medium text-[var(--ui-muted)]">原始照片</figcaption>
+              <ImagePreview file={value.original} alt={`${title}原始照片`} className="aspect-[1/1.414] w-full rounded border bg-gray-100 object-contain" />
+            </figure>
+            <figure>
+              <figcaption className="mb-2 text-center text-xs font-medium text-[var(--ui-primary)]">A4 居中裁切结果</figcaption>
+              <ImagePreview file={value.cropped} alt={`${title}裁切结果`} className="aspect-[1/1.414] w-full rounded border border-blue-300 bg-gray-100 object-contain" />
+            </figure>
+          </div>
+          <button type="button" onClick={downloadCropped} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--ui-primary)] py-2 text-sm font-medium text-[var(--ui-primary)]">
+            <Download size={17} />下载裁切结果
+          </button>
+        </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3">
           <button type="button" onClick={() => inputRef.current?.click()} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-lg border border-[var(--ui-border)] text-sm font-medium">
@@ -179,7 +203,7 @@ export default function CameraUploadTest() {
     }
     if (!window.confirm('确认您是本班级学员吗？')) return
     setDone(true)
-    setMessage('测试流程已完成：两份图片已完成 A4 裁切与本地预览，尚未上传到正式服务器。')
+    setMessage('测试流程已完成。请下载两张裁切结果并发送给我审查。')
   }
 
   return (
