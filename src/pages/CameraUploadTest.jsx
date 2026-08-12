@@ -65,7 +65,9 @@ function ImagePreview({ file, alt, className = '' }) {
 function CameraModal({ title, onClose, onCapture }) {
   const videoRef = useRef(null)
   const frameRef = useRef(null)
+  const trackRef = useRef(null)
   const [cameraError, setCameraError] = useState('')
+  const [cameraResolution, setCameraResolution] = useState('正在启动高清相机...')
   const unsupported = !navigator.mediaDevices?.getUserMedia
   const error = unsupported ? '当前浏览器不支持调用相机' : cameraError
 
@@ -74,11 +76,25 @@ function CameraModal({ title, onClose, onCapture }) {
     if (unsupported) return undefined
 
     navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 3840 },
+        height: { ideal: 2160 },
+      },
       audio: false,
-    }).then((value) => {
+    }).then(async (value) => {
       stream = value
+      const track = value.getVideoTracks()[0]
+      trackRef.current = track
+
+      const capabilities = track.getCapabilities?.() ?? {}
+      if (capabilities.focusMode?.includes('continuous')) {
+        await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => undefined)
+      }
+
       if (videoRef.current) videoRef.current.srcObject = value
+      const settings = track.getSettings?.() ?? {}
+      setCameraResolution(`${settings.width ?? '-'} × ${settings.height ?? '-'} · 连续自动对焦`)
     }).catch(() => {
       setCameraError('无法打开相机。请允许浏览器使用相机，或改为从相册上传。')
     })
@@ -86,55 +102,82 @@ function CameraModal({ title, onClose, onCapture }) {
     return () => stream?.getTracks().forEach((track) => track.stop())
   }, [unsupported])
 
-  const capture = () => {
+  const capture = async () => {
     const video = videoRef.current
     const frame = frameRef.current
     if (!video?.videoWidth || !frame) return
 
     const videoRect = video.getBoundingClientRect()
     const frameRect = frame.getBoundingClientRect()
+    let source
+    let captureWidth
+    let captureHeight
+    let originalBlob
+
+    if (window.ImageCapture && trackRef.current) {
+      try {
+        originalBlob = await new window.ImageCapture(trackRef.current).takePhoto()
+        source = await createImageBitmap(originalBlob)
+        captureWidth = source.width
+        captureHeight = source.height
+      } catch {
+        source = video
+        captureWidth = video.videoWidth
+        captureHeight = video.videoHeight
+      }
+    } else {
+      source = video
+      captureWidth = video.videoWidth
+      captureHeight = video.videoHeight
+    }
+
     const scale = Math.max(
-      videoRect.width / video.videoWidth,
-      videoRect.height / video.videoHeight,
+      videoRect.width / captureWidth,
+      videoRect.height / captureHeight,
     )
-    const renderedWidth = video.videoWidth * scale
-    const renderedHeight = video.videoHeight * scale
+    const renderedWidth = captureWidth * scale
+    const renderedHeight = captureHeight * scale
     const hiddenX = (renderedWidth - videoRect.width) / 2
     const hiddenY = (renderedHeight - videoRect.height) / 2
-    const sourceX = (frameRect.left - videoRect.left + hiddenX) / scale
-    const sourceY = (frameRect.top - videoRect.top + hiddenY) / scale
-    const sourceWidth = frameRect.width / scale
-    const sourceHeight = frameRect.height / scale
+    const cropX = (frameRect.left - videoRect.left + hiddenX) / scale
+    const cropY = (frameRect.top - videoRect.top + hiddenY) / scale
+    const cropWidth = frameRect.width / scale
+    const cropHeight = frameRect.height / scale
 
     const originalCanvas = document.createElement('canvas')
-    originalCanvas.width = video.videoWidth
-    originalCanvas.height = video.videoHeight
-    originalCanvas.getContext('2d').drawImage(video, 0, 0)
+    originalCanvas.width = captureWidth
+    originalCanvas.height = captureHeight
+    originalCanvas.getContext('2d').drawImage(source, 0, 0)
 
     const croppedCanvas = document.createElement('canvas')
-    croppedCanvas.width = 1240
-    croppedCanvas.height = 1754
+    const outputScale = Math.min(1, 1654 / cropWidth, 2339 / cropHeight)
+    croppedCanvas.width = Math.max(1, Math.round(cropWidth * outputScale))
+    croppedCanvas.height = Math.max(1, Math.round(cropHeight * outputScale))
     croppedCanvas.getContext('2d').drawImage(
-      video,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
+      source,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
       0,
       0,
       croppedCanvas.width,
       croppedCanvas.height,
     )
 
-    Promise.all([
-      new Promise((resolve) => originalCanvas.toBlob(resolve, 'image/jpeg', 0.95)),
-      new Promise((resolve) => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.9)),
+    const blobs = await Promise.all([
+      originalBlob ?? new Promise((resolve) => originalCanvas.toBlob(resolve, 'image/jpeg', 0.98)),
+      new Promise((resolve) => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.96)),
     ]).then(([originalBlob, croppedBlob]) => {
       if (!originalBlob || !croppedBlob) return
-      onCapture({
-        original: new File([originalBlob], 'camera-original.jpg', { type: 'image/jpeg' }),
-        cropped: new File([croppedBlob], 'camera-a4-cropped.jpg', { type: 'image/jpeg' }),
-      })
+      return { originalBlob, croppedBlob }
+    })
+
+    if (source !== video) source.close?.()
+    if (!blobs) return
+    onCapture({
+      original: new File([blobs.originalBlob], 'camera-original.jpg', { type: 'image/jpeg' }),
+      cropped: new File([blobs.croppedBlob], 'camera-a4-cropped.jpg', { type: 'image/jpeg' }),
     })
   }
 
@@ -154,6 +197,7 @@ function CameraModal({ title, onClose, onCapture }) {
             <div className="pointer-events-none absolute inset-x-[16%] top-[12%] flex items-center justify-center gap-1 text-xs font-semibold text-yellow-200">
               <ScanLine size={15} />黄色框内放入完整 A4 纸
             </div>
+            <p className="absolute inset-x-4 top-3 text-center text-xs text-white/80">{cameraResolution}</p>
             <p className="absolute inset-x-5 bottom-4 text-center text-sm text-yellow-100">
               保持手机与纸张平行，避免阴影和反光
             </p>
