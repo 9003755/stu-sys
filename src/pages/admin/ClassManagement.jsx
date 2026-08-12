@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabaseAdmin } from '../../lib/supabase'
 import { buildAppUrl } from '../../lib/siteUrls'
 import { QRCodeSVG } from 'qrcode.react'
-import { Trash2, Plus, X, Share2, Users } from 'lucide-react'
+import { Trash2, Plus, X, Share2, Users, FileUp } from 'lucide-react'
 
 export default function ClassManagement({ onViewStudents }) {
   const [classes, setClasses] = useState([])
@@ -10,6 +10,8 @@ export default function ClassManagement({ onViewStudents }) {
   const [showModal, setShowModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [currentClass, setCurrentClass] = useState(null)
+  const [collectionQr, setCollectionQr] = useState(null)
+  const [documentStats, setDocumentStats] = useState({})
   
   // Form state
   const [formData, setFormData] = useState({
@@ -38,6 +40,20 @@ export default function ClassManagement({ onViewStudents }) {
 
       if (error) throw error
       setClasses(data || [])
+      const classIds = (data || []).map((item) => item.id)
+      if (classIds.length) {
+        const [enrollmentResult, submissionResult] = await Promise.all([
+          supabaseAdmin.from('enrollments').select('id,class_id').in('class_id', classIds),
+          supabaseAdmin.from('class_document_submissions').select('class_id,enrollment_id').in('class_id', classIds).eq('match_status', 'matched'),
+        ])
+        if (!enrollmentResult.error && !submissionResult.error) {
+          const next = {}
+          classIds.forEach((id) => { next[id] = { total: 0, submitted: 0 } })
+          enrollmentResult.data?.forEach((item) => { next[item.class_id].total += 1 })
+          submissionResult.data?.forEach((item) => { if (item.enrollment_id) next[item.class_id].submitted += 1 })
+          setDocumentStats(next)
+        }
+      } else setDocumentStats({})
     } catch (error) {
       console.error('Error fetching classes:', error)
       alert('获取班级列表失败')
@@ -123,6 +139,16 @@ export default function ClassManagement({ onViewStudents }) {
     return buildAppUrl(`/enroll/${classId}`)
   }
 
+  const openCollectionQr = async (cls) => {
+    try {
+      const { data, error } = await supabaseAdmin.rpc('ensure_class_document_collection', { target_class_id: cls.id })
+      if (error) throw error
+      setCollectionQr({ className: cls.name, url: buildAppUrl(`/class-documents/${data.access_token}`) })
+    } catch (error) {
+      alert('无法生成资料收集二维码：' + error.message)
+    }
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-500">加载中...</div>
 
   return (
@@ -145,6 +171,7 @@ export default function ClassManagement({ onViewStudents }) {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">班级名称</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">开班日期</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">资料提交</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
             </tr>
@@ -152,7 +179,7 @@ export default function ClassManagement({ onViewStudents }) {
           <tbody className="bg-white divide-y divide-gray-200">
             {classes.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
+                <td colSpan="6" className="px-6 py-10 text-center text-gray-500">
                   暂无班级，请点击右上角创建
                 </td>
               </tr>
@@ -173,6 +200,9 @@ export default function ClassManagement({ onViewStudents }) {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">
+                    {documentStats[cls.id] ? <span className={documentStats[cls.id].submitted === documentStats[cls.id].total && documentStats[cls.id].total > 0 ? 'text-green-700' : 'text-amber-700'}>已交 {documentStats[cls.id].submitted}/{documentStats[cls.id].total} · 未交 {Math.max(0, documentStats[cls.id].total - documentStats[cls.id].submitted)}</span> : '未启用'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">
                     {cls.description}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
@@ -181,6 +211,9 @@ export default function ClassManagement({ onViewStudents }) {
                     </button>
                     <button onClick={() => onViewStudents && onViewStudents(cls.id)} className="text-indigo-600 hover:text-indigo-900" title="查看学员">
                       <Users size={18} />
+                    </button>
+                    <button onClick={() => openCollectionQr(cls)} className="text-emerald-600 hover:text-emerald-900" title="收集学员无犯罪记录及身体健康申明">
+                      <FileUp size={18} />
                     </button>
                     <button onClick={() => handleDelete(cls.id)} className="text-red-600 hover:text-red-900" title="删除班级">
                       <Trash2 size={18} />
@@ -282,6 +315,18 @@ export default function ClassManagement({ onViewStudents }) {
             >
               打印此页
             </button>
+          </div>
+        </div>
+      )}
+      {collectionQr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-sm rounded-lg bg-white p-8 text-center shadow-xl">
+            <button onClick={() => setCollectionQr(null)} className="absolute right-4 top-4 text-gray-400"><X size={24} /></button>
+            <h3 className="text-xl font-bold">{collectionQr.className}</h3>
+            <p className="mt-2 text-sm text-gray-600">收集学员“无犯罪记录”及“身体健康申明”</p>
+            <div className="my-6 flex justify-center"><QRCodeSVG value={collectionQr.url} size={200} level="H" includeMargin /></div>
+            <p className="break-all rounded bg-gray-100 p-3 text-xs text-gray-500">{collectionQr.url}</p>
+            <button onClick={() => window.print()} className="mt-5 text-sm font-medium text-blue-600">打印此二维码</button>
           </div>
         </div>
       )}

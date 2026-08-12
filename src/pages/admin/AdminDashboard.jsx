@@ -4,6 +4,7 @@ import { supabaseAdmin } from '../../lib/supabase'
 import { useAdminAuth } from '../../contexts/AdminAuthContext'
 import ClassManagement from './ClassManagement'
 import EnrollmentManagement from './EnrollmentManagement'
+import ClassDocumentManagement from './ClassDocumentManagement'
 
 export default function AdminDashboard() {
   const { adminUser, adminSignOut } = useAdminAuth()
@@ -100,6 +101,12 @@ export default function AdminDashboard() {
                 >
                   学员列表
                 </button>
+                <button
+                  onClick={() => setActiveTab('documents')}
+                  className={`${activeTab === 'documents' ? 'bg-[var(--ui-primary)] text-white' : 'text-[var(--ui-muted)] hover:bg-[var(--ui-primary-soft)] hover:text-[var(--ui-primary)]'} rounded-md px-3 py-2 text-sm font-medium transition-colors`}
+                >
+                  资料收集
+                </button>
               </div>
             </div>
 
@@ -115,11 +122,9 @@ export default function AdminDashboard() {
 
       <main>
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          {activeTab === 'classes' ? (
-            <ClassManagement onViewStudents={handleViewClassStudents} />
-          ) : (
-            <EnrollmentManagement initialClassId={selectedClassId} />
-          )}
+          {activeTab === 'classes' && <ClassManagement onViewStudents={handleViewClassStudents} />}
+          {activeTab === 'students' && <EnrollmentManagement initialClassId={selectedClassId} />}
+          {activeTab === 'documents' && <ClassDocumentManagement />}
         </div>
       </main>
     </div>
