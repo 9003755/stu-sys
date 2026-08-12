@@ -205,19 +205,22 @@ export default function ClassManagement({ onViewStudents }) {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">
                     {cls.description}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                    <button onClick={() => openQR(cls)} className="text-blue-600 hover:text-blue-900" title="班级报名入口">
-                      <Share2 size={18} />
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => openQR(cls)} className="inline-flex h-9 w-9 items-center justify-center rounded border border-blue-200 text-blue-700 hover:bg-blue-50" title="班级报名二维码" aria-label="班级报名二维码">
+                      <Share2 size={17} />
                     </button>
-                    <button onClick={() => onViewStudents && onViewStudents(cls.id)} className="text-indigo-600 hover:text-indigo-900" title="查看学员">
-                      <Users size={18} />
+                    <button onClick={() => onViewStudents && onViewStudents(cls.id)} className="inline-flex h-9 w-9 items-center justify-center rounded border border-indigo-200 text-indigo-700 hover:bg-indigo-50" title="查看学员" aria-label="查看学员">
+                      <Users size={17} />
                     </button>
-                    <button onClick={() => openCollectionQr(cls)} className="text-emerald-600 hover:text-emerald-900" title="收集学员无犯罪记录及身体健康申明">
-                      <FileUp size={18} />
+                    <button onClick={() => openCollectionQr(cls)} className="inline-flex h-9 items-center gap-2 rounded bg-emerald-600 px-3 font-semibold text-white hover:bg-emerald-700" title="生成资料收集二维码">
+                      <FileUp size={17} />
+                      资料收集二维码
                     </button>
-                    <button onClick={() => handleDelete(cls.id)} className="text-red-600 hover:text-red-900" title="删除班级">
-                      <Trash2 size={18} />
+                    <button onClick={() => handleDelete(cls.id)} className="inline-flex h-9 w-9 items-center justify-center rounded border border-red-200 text-red-700 hover:bg-red-50" title="删除班级" aria-label="删除班级">
+                      <Trash2 size={17} />
                     </button>
+                    </div>
                   </td>
                 </tr>
               ))
