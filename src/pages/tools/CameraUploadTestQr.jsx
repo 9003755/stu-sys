@@ -1,8 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react'
-import { buildAppUrl } from '../../lib/siteUrls'
 
 export default function CameraUploadTestQr() {
-  const url = buildAppUrl('/camera-upload-test')
+  const url = `${window.location.origin}/camera-upload-test`
 
   return (
     <main className="min-h-screen bg-[var(--ui-page)] p-6">
