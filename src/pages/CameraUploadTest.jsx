@@ -64,6 +64,7 @@ function ImagePreview({ file, alt, className = '' }) {
 
 function CameraModal({ title, onClose, onCapture }) {
   const videoRef = useRef(null)
+  const frameRef = useRef(null)
   const [cameraError, setCameraError] = useState('')
   const unsupported = !navigator.mediaDevices?.getUserMedia
   const error = unsupported ? '当前浏览器不支持调用相机' : cameraError
@@ -87,17 +88,54 @@ function CameraModal({ title, onClose, onCapture }) {
 
   const capture = () => {
     const video = videoRef.current
-    if (!video?.videoWidth) return
+    const frame = frameRef.current
+    if (!video?.videoWidth || !frame) return
 
-    const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    canvas.getContext('2d').drawImage(video, 0, 0)
-    canvas.toBlob(async (blob) => {
-      if (!blob) return
-      const original = new File([blob], 'camera-original.jpg', { type: 'image/jpeg' })
-      onCapture({ original, cropped: await cropToA4(original) })
-    }, 'image/jpeg', 0.95)
+    const videoRect = video.getBoundingClientRect()
+    const frameRect = frame.getBoundingClientRect()
+    const scale = Math.max(
+      videoRect.width / video.videoWidth,
+      videoRect.height / video.videoHeight,
+    )
+    const renderedWidth = video.videoWidth * scale
+    const renderedHeight = video.videoHeight * scale
+    const hiddenX = (renderedWidth - videoRect.width) / 2
+    const hiddenY = (renderedHeight - videoRect.height) / 2
+    const sourceX = (frameRect.left - videoRect.left + hiddenX) / scale
+    const sourceY = (frameRect.top - videoRect.top + hiddenY) / scale
+    const sourceWidth = frameRect.width / scale
+    const sourceHeight = frameRect.height / scale
+
+    const originalCanvas = document.createElement('canvas')
+    originalCanvas.width = video.videoWidth
+    originalCanvas.height = video.videoHeight
+    originalCanvas.getContext('2d').drawImage(video, 0, 0)
+
+    const croppedCanvas = document.createElement('canvas')
+    croppedCanvas.width = 1240
+    croppedCanvas.height = 1754
+    croppedCanvas.getContext('2d').drawImage(
+      video,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      croppedCanvas.width,
+      croppedCanvas.height,
+    )
+
+    Promise.all([
+      new Promise((resolve) => originalCanvas.toBlob(resolve, 'image/jpeg', 0.95)),
+      new Promise((resolve) => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.9)),
+    ]).then(([originalBlob, croppedBlob]) => {
+      if (!originalBlob || !croppedBlob) return
+      onCapture({
+        original: new File([originalBlob], 'camera-original.jpg', { type: 'image/jpeg' }),
+        cropped: new File([croppedBlob], 'camera-a4-cropped.jpg', { type: 'image/jpeg' }),
+      })
+    })
   }
 
   return (
@@ -112,8 +150,8 @@ function CameraModal({ title, onClose, onCapture }) {
         ) : (
           <div className="relative aspect-[3/4]">
             <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
-            <div className="pointer-events-none absolute inset-x-[12%] inset-y-[7%] border-4 border-yellow-400 shadow-[0_0_0_999px_rgba(0,0,0,.45)]" />
-            <div className="pointer-events-none absolute inset-x-[16%] top-[11%] flex items-center justify-center gap-1 text-xs font-semibold text-yellow-200">
+            <div ref={frameRef} className="pointer-events-none absolute left-[12%] top-1/2 aspect-[1/1.414] w-[76%] -translate-y-1/2 border-4 border-yellow-400 shadow-[0_0_0_999px_rgba(0,0,0,.45)]" />
+            <div className="pointer-events-none absolute inset-x-[16%] top-[12%] flex items-center justify-center gap-1 text-xs font-semibold text-yellow-200">
               <ScanLine size={15} />黄色框内放入完整 A4 纸
             </div>
             <p className="absolute inset-x-5 bottom-4 text-center text-sm text-yellow-100">
@@ -164,7 +202,7 @@ function DocumentCard({ title, value, onChange, onOpenCamera }) {
               <ImagePreview file={value.original} alt={`${title}原始照片`} className="aspect-[1/1.414] w-full rounded border bg-gray-100 object-contain" />
             </figure>
             <figure>
-              <figcaption className="mb-2 text-center text-xs font-medium text-[var(--ui-primary)]">A4 居中裁切结果</figcaption>
+              <figcaption className="mb-2 text-center text-xs font-medium text-[var(--ui-primary)]">黄色框精确裁切结果</figcaption>
               <ImagePreview file={value.cropped} alt={`${title}裁切结果`} className="aspect-[1/1.414] w-full rounded border border-blue-300 bg-gray-100 object-contain" />
             </figure>
           </div>
