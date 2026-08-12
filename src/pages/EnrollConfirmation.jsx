@@ -363,7 +363,7 @@ export default function EnrollConfirmation() {
               </div>
               <div className="space-y-3">
                 <Link to="/" className="block w-full bg-[var(--vercel-canvas-soft)] text-[var(--vercel-ink)] py-2.5 rounded-lg hover:bg-[var(--vercel-canvas-soft-2)] border border-[var(--vercel-hairline)]">
-                  返回首页
+                  修改报名资料
                 </Link>
                 <button 
                   onClick={handleFinishAndLogout}
