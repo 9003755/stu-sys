@@ -4,7 +4,7 @@ import { buildAppUrl } from '../../lib/siteUrls'
 import { QRCodeSVG } from 'qrcode.react'
 import { Trash2, Plus, X, Share2, Users, FileUp } from 'lucide-react'
 
-export default function ClassManagement({ onViewStudents }) {
+export default function ClassManagement({ onViewStudents, onViewDocuments }) {
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -44,13 +44,13 @@ export default function ClassManagement({ onViewStudents }) {
       if (classIds.length) {
         const [enrollmentResult, submissionResult] = await Promise.all([
           supabaseAdmin.from('enrollments').select('id,class_id').in('class_id', classIds),
-          supabaseAdmin.from('class_document_submissions').select('class_id,enrollment_id').in('class_id', classIds).eq('match_status', 'matched'),
+          supabaseAdmin.from('class_document_submissions').select('class_id,enrollment_id,match_status').in('class_id', classIds),
         ])
         if (!enrollmentResult.error && !submissionResult.error) {
           const next = {}
-          classIds.forEach((id) => { next[id] = { total: 0, submitted: 0 } })
+          classIds.forEach((id) => { next[id] = { total: 0, submitted: 0, pending: 0 } })
           enrollmentResult.data?.forEach((item) => { next[item.class_id].total += 1 })
-          submissionResult.data?.forEach((item) => { if (item.enrollment_id) next[item.class_id].submitted += 1 })
+          submissionResult.data?.forEach((item) => { if (item.match_status === 'matched' && item.enrollment_id) next[item.class_id].submitted += 1; if (item.match_status === 'pending') next[item.class_id].pending += 1 })
           setDocumentStats(next)
         }
       } else setDocumentStats({})
@@ -200,7 +200,7 @@ export default function ClassManagement({ onViewStudents }) {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">
-                    {documentStats[cls.id] ? <span className={documentStats[cls.id].submitted === documentStats[cls.id].total && documentStats[cls.id].total > 0 ? 'text-green-700' : 'text-amber-700'}>已交 {documentStats[cls.id].submitted}/{documentStats[cls.id].total} · 未交 {Math.max(0, documentStats[cls.id].total - documentStats[cls.id].submitted)}</span> : '未启用'}
+                    {documentStats[cls.id] ? <button type="button" onClick={() => onViewDocuments?.(cls.id)} className={`text-left hover:underline ${documentStats[cls.id].pending > 0 ? 'font-semibold text-red-700' : documentStats[cls.id].submitted === documentStats[cls.id].total && documentStats[cls.id].total > 0 ? 'text-green-700' : 'text-amber-700'}`}>已交 {documentStats[cls.id].submitted}/{documentStats[cls.id].total} · 未交 {Math.max(0, documentStats[cls.id].total - documentStats[cls.id].submitted)}{documentStats[cls.id].pending > 0 ? ` · 待核对 ${documentStats[cls.id].pending}` : ''}</button> : '未启用'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">
                     {cls.description}

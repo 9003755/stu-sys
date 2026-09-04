@@ -12,6 +12,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('classes') // 'classes' or 'students'
   const [selectedClassId, setSelectedClassId] = useState(null) // For filtering students from class list
+  const [selectedDocumentClassId, setSelectedDocumentClassId] = useState(null)
   const [adminProfile, setAdminProfile] = useState(null)
 
   useEffect(() => {
@@ -47,6 +48,11 @@ export default function AdminDashboard() {
   const handleViewClassStudents = (classId) => {
     setSelectedClassId(classId)
     setActiveTab('students')
+  }
+
+  const handleViewClassDocuments = (classId) => {
+    setSelectedDocumentClassId(classId)
+    setActiveTab('documents')
   }
 
   if (loading) {
@@ -122,9 +128,9 @@ export default function AdminDashboard() {
 
       <main>
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          {activeTab === 'classes' && <ClassManagement onViewStudents={handleViewClassStudents} />}
+          {activeTab === 'classes' && <ClassManagement onViewStudents={handleViewClassStudents} onViewDocuments={handleViewClassDocuments} />}
           {activeTab === 'students' && <EnrollmentManagement initialClassId={selectedClassId} />}
-          {activeTab === 'documents' && <ClassDocumentManagement />}
+          {activeTab === 'documents' && <ClassDocumentManagement initialClassId={selectedDocumentClassId} />}
         </div>
       </main>
     </div>

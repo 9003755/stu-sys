@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, Eye, FileArchive, RefreshCw, Trash2, Upload } from 'lucide-react'
 import JSZip from 'jszip'
 import { supabaseAdmin } from '../../lib/supabase'
@@ -20,7 +20,7 @@ const toJpeg = (file) => new Promise((resolve, reject) => {
   image.src = url
 })
 
-export default function ClassDocumentManagement() {
+export default function ClassDocumentManagement({ initialClassId = '' }) {
   const [classes, setClasses] = useState([])
   const [students, setStudents] = useState([])
   const [submissions, setSubmissions] = useState([])
@@ -29,7 +29,7 @@ export default function ClassDocumentManagement() {
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const { data: { user } } = await supabaseAdmin.auth.getUser()
@@ -45,12 +45,13 @@ export default function ClassDocumentManagement() {
       setClasses(ownedClasses || [])
       setStudents(enrollmentResult.data || [])
       setSubmissions(submissionResult.data || [])
-      setClassId((current) => current || ids[0] || '')
+      setClassId((current) => (initialClassId && ids.includes(initialClassId) ? initialClassId : current || ids[0] || ''))
     } catch (error) {
       alert(`加载资料状态失败：${error.message}`)
     } finally { setLoading(false) }
-  }
-  useEffect(() => { load() }, [])
+  }, [initialClassId])
+  useEffect(() => { load() }, [load])
+  useEffect(() => { if (initialClassId) setClassId(initialClassId) }, [initialClassId])
 
   const classStudents = useMemo(() => students.filter((item) => item.class_id === classId), [students, classId])
   const classSubmissions = useMemo(() => submissions.filter((item) => item.class_id === classId), [submissions, classId])
@@ -116,7 +117,7 @@ export default function ClassDocumentManagement() {
       <div className="flex gap-2"><button type="button" onClick={load} className="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm"><RefreshCw size={16} />刷新</button><button type="button" onClick={downloadZip} disabled={busy || !classId} className="inline-flex items-center gap-2 rounded bg-[var(--ui-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><FileArchive size={17} />{busy ? '正在打包...' : '下载全班 ZIP'}</button></div>
     </div>
     <div className="overflow-x-auto rounded-lg border border-[var(--ui-border)] bg-white shadow-sm"><table className="min-w-full text-sm"><thead className="bg-gray-50 text-left"><tr><th className="px-4 py-3">学员</th><th className="px-4 py-3">提交状态</th><th className="px-4 py-3">无犯罪记录</th><th className="px-4 py-3">身体健康申明</th><th className="px-4 py-3">操作</th></tr></thead><tbody>{classStudents.map((student) => { const submission = matched.get(student.id); const name = safeName(student.profiles?.real_name); return <tr key={student.id} className="border-t"><td className="px-4 py-3 font-medium">{name}</td><td className="px-4 py-3"><span className={submission ? 'text-green-700' : 'text-amber-700'}>{submission ? '已提交两份' : '未提交'}</span></td><td className="px-4 py-3">{submission ? <div className="flex gap-2"><button type="button" title="预览" onClick={() => view(submission.criminal_record_path, `${name}+无犯罪记录`)} className="text-[var(--ui-primary)]"><Eye size={18} /></button><button type="button" title="下载" onClick={() => download(submission.criminal_record_path, `${name}+无犯罪记录.jpg`)} className="text-[var(--ui-primary)]"><Download size={18} /></button><label title="替换" className="cursor-pointer text-amber-700"><Upload size={18} /><input type="file" accept="image/*" className="hidden" onChange={(event) => replaceDocument(submission.id, submission.criminal_record_path, event.target.files?.[0])} /></label></div> : '-'}</td><td className="px-4 py-3">{submission ? <div className="flex gap-2"><button type="button" title="预览" onClick={() => view(submission.health_declaration_path, `${name}+身体健康申明`)} className="text-[var(--ui-primary)]"><Eye size={18} /></button><button type="button" title="下载" onClick={() => download(submission.health_declaration_path, `${name}+身体健康申明.jpg`)} className="text-[var(--ui-primary)]"><Download size={18} /></button><label title="替换" className="cursor-pointer text-amber-700"><Upload size={18} /><input type="file" accept="image/*" className="hidden" onChange={(event) => replaceDocument(submission.id, submission.health_declaration_path, event.target.files?.[0])} /></label></div> : '-'}</td><td className="px-4 py-3">{submission ? <button type="button" onClick={() => deleteSubmission(submission)} className="inline-flex items-center gap-1 text-red-700"><Trash2 size={16} />删除</button> : '-'}</td></tr> })}</tbody></table></div>
-    {pending.length ? <section className="rounded-lg border border-amber-200 bg-amber-50 p-4"><h2 className="font-semibold text-amber-900">待处理的姓名不匹配资料</h2><div className="mt-3 space-y-3">{pending.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-3 rounded bg-white p-3"><b>{item.submitted_name}</b><select defaultValue="" onChange={(event) => resolveSubmission(item, event.target.value)} className="rounded border px-2 py-1 text-sm"><option value="">选择正确学员并归档</option>{classStudents.filter((student) => !matched.has(student.id)).map((student) => <option key={student.id} value={student.id}>{student.profiles?.real_name}</option>)}</select><button type="button" onClick={() => deleteSubmission(item)} className="inline-flex items-center gap-1 text-sm text-red-700"><Trash2 size={16} />删除</button></div>)}</div></section> : null}
+    {pending.length ? <section className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4"><h2 className="font-semibold text-amber-950">待核对姓名资料（{pending.length}）</h2><p className="mt-1 text-sm text-amber-800">以下姓名未匹配班级名单，必须选择正确学员归档或删除。</p><div className="mt-3 space-y-3">{pending.map((item) => <div key={item.id} className="rounded border border-amber-200 bg-white p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><b>{item.submitted_name}</b><span className="ml-2 text-xs text-amber-700">名单中无此姓名</span></div><button type="button" onClick={() => deleteSubmission(item)} className="inline-flex items-center gap-1 text-sm text-red-700"><Trash2 size={16} />删除</button></div><div className="mt-3 flex flex-wrap items-center gap-3"><span className="text-sm font-medium">无犯罪记录</span><button type="button" onClick={() => view(item.criminal_record_path, `${item.submitted_name}+无犯罪记录`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Eye size={16} />预览</button><button type="button" onClick={() => download(item.criminal_record_path, `${safeName(item.submitted_name)}+无犯罪记录.jpg`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Download size={16} />下载</button><span className="ml-2 text-sm font-medium">身体健康申明</span><button type="button" onClick={() => view(item.health_declaration_path, `${item.submitted_name}+身体健康申明`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Eye size={16} />预览</button><button type="button" onClick={() => download(item.health_declaration_path, `${safeName(item.submitted_name)}+身体健康申明.jpg`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Download size={16} />下载</button></div><label className="mt-3 block text-sm font-medium">修改为正确姓名<select defaultValue="" onChange={(event) => resolveSubmission(item, event.target.value)} className="ml-3 rounded border px-2 py-1 text-sm"><option value="">请选择本班学员</option>{classStudents.filter((student) => !matched.has(student.id)).map((student) => <option key={student.id} value={student.id}>{student.profiles?.real_name}</option>)}</select></label></div>)}</div></section> : null}
     {preview ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"><div className="relative max-h-[90vh] w-full max-w-2xl rounded-lg bg-white p-4"><button type="button" onClick={() => setPreview(null)} className="absolute right-3 top-3 text-gray-500">关闭</button><h2 className="mb-3 font-semibold">{preview.title}</h2><img src={preview.url} alt={preview.title} className="mx-auto max-h-[78vh] object-contain" /></div></div> : null}
   </div>
 }

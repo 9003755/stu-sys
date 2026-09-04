@@ -11,12 +11,4 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  build: {
-    rollupOptions: {
-      // Keep the heavy scanner runtime address stable so cached upload pages remain compatible after deploys.
-      output: {
-        chunkFileNames: (chunk) => chunk.name === 'opencv' ? 'assets/opencv.js' : 'assets/[name]-[hash].js',
-      },
-    },
-  },
 })
