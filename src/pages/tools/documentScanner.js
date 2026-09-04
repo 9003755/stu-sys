@@ -1,13 +1,20 @@
+import cvModule from '@techstark/opencv-js'
+
 const OUTPUT_WIDTH = 1654
 const OUTPUT_HEIGHT = 2339
 let cvPromise
 
 const loadCv = async () => {
   if (!cvPromise) {
-    cvPromise = import('@techstark/opencv-js').then((module) => {
-      const value = module.default ?? module
-      return typeof value?.then === 'function' ? value : value
-    })
+    cvPromise = (async () => {
+      if (cvModule instanceof Promise) return cvModule
+      if (cvModule?.Mat) return cvModule
+      await new Promise((resolve, reject) => {
+        cvModule.onRuntimeInitialized = resolve
+        cvModule.onAbort = reject
+      })
+      return cvModule
+    })()
   }
   return cvPromise
 }
