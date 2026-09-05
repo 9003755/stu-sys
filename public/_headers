@@ -1,0 +1,4 @@
+/assets/index-*.js
+  Cache-Control: no-cache, must-revalidate
+/assets/admin-dashboard.js
+  Cache-Control: no-cache, must-revalidate

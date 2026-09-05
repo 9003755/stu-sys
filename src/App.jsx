@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom'
 import ClassDocumentUpload from './pages/ClassDocumentUpload'
+import { lazyWithRetry } from './lib/lazyWithRetry'
 
-const PrivateApp = lazy(() => import('./PrivateApp'))
+const PrivateApp = lazyWithRetry(() => import('./PrivateApp'))
 
 function AppRoutes() {
   const location = useLocation()

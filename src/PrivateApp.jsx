@@ -1,19 +1,20 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AdminAuthProvider } from './contexts/AdminAuthContext'
 import { SuperAuthProvider } from './contexts/SuperAuthContext'
+import { lazyWithRetry } from './lib/lazyWithRetry'
 
-const Login = lazy(() => import('./pages/Login'))
-const Register = lazy(() => import('./pages/Register'))
-const StudentProfile = lazy(() => import('./pages/StudentProfile'))
-const EnrollConfirmation = lazy(() => import('./pages/EnrollConfirmation'))
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
-const AdminRegister = lazy(() => import('./pages/admin/AdminRegister'))
-const SuperLogin = lazy(() => import('./pages/super/SuperLogin'))
-const SuperDashboard = lazy(() => import('./pages/super/SuperDashboard'))
-const AllStudents = lazy(() => import('./pages/super/AllStudents'))
-const ExcelTemplateFilterTool = lazy(() => import('./pages/tools/ExcelTemplateFilterTool'))
+const Login = lazyWithRetry(() => import('./pages/Login'))
+const Register = lazyWithRetry(() => import('./pages/Register'))
+const StudentProfile = lazyWithRetry(() => import('./pages/StudentProfile'))
+const EnrollConfirmation = lazyWithRetry(() => import('./pages/EnrollConfirmation'))
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard'))
+const AdminRegister = lazyWithRetry(() => import('./pages/admin/AdminRegister'))
+const SuperLogin = lazyWithRetry(() => import('./pages/super/SuperLogin'))
+const SuperDashboard = lazyWithRetry(() => import('./pages/super/SuperDashboard'))
+const AllStudents = lazyWithRetry(() => import('./pages/super/AllStudents'))
+const ExcelTemplateFilterTool = lazyWithRetry(() => import('./pages/tools/ExcelTemplateFilterTool'))
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()

@@ -11,4 +11,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        chunkFileNames: (chunk) => chunk.name === 'AdminDashboard'
+          ? 'assets/admin-dashboard.js'
+          : 'assets/[name]-[hash].js',
+      },
+    },
+  },
 })

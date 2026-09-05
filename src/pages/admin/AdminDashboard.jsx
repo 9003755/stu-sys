@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabaseAdmin } from '../../lib/supabase'
 import { useAdminAuth } from '../../contexts/AdminAuthContext'
-import ClassManagement from './ClassManagement'
-import EnrollmentManagement from './EnrollmentManagement'
-import ClassDocumentManagement from './ClassDocumentManagement'
+import { lazyWithRetry } from '../../lib/lazyWithRetry'
+
+const ClassManagement = lazyWithRetry(() => import('./ClassManagement'))
+const EnrollmentManagement = lazyWithRetry(() => import('./EnrollmentManagement'))
+const ClassDocumentManagement = lazyWithRetry(() => import('./ClassDocumentManagement'))
 
 const withTimeout = (promise, message, timeoutMs = 15000) => Promise.race([
   promise,
@@ -146,9 +148,11 @@ export default function AdminDashboard() {
 
       <main>
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          {activeTab === 'classes' && <ClassManagement onViewStudents={handleViewClassStudents} onViewDocuments={handleViewClassDocuments} />}
-          {activeTab === 'students' && <EnrollmentManagement initialClassId={selectedClassId} />}
-          {activeTab === 'documents' && <ClassDocumentManagement initialClassId={selectedDocumentClassId} />}
+          <Suspense fallback={<div className="p-8 text-center text-[var(--ui-muted)]">正在加载功能...</div>}>
+            {activeTab === 'classes' && <ClassManagement onViewStudents={handleViewClassStudents} onViewDocuments={handleViewClassDocuments} />}
+            {activeTab === 'students' && <EnrollmentManagement initialClassId={selectedClassId} />}
+            {activeTab === 'documents' && <ClassDocumentManagement initialClassId={selectedDocumentClassId} />}
+          </Suspense>
         </div>
       </main>
     </div>
