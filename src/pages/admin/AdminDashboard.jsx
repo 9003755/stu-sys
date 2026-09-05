@@ -6,6 +6,11 @@ import ClassManagement from './ClassManagement'
 import EnrollmentManagement from './EnrollmentManagement'
 import ClassDocumentManagement from './ClassDocumentManagement'
 
+const withTimeout = (promise, message, timeoutMs = 15000) => Promise.race([
+  promise,
+  new Promise((_, reject) => window.setTimeout(() => reject(new Error(message)), timeoutMs)),
+])
+
 export default function AdminDashboard() {
   const { adminUser, adminSignOut, loading: authLoading } = useAdminAuth()
   const navigate = useNavigate()
@@ -24,11 +29,11 @@ export default function AdminDashboard() {
         return
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await withTimeout(supabaseAdmin
         .from('admins')
         .select('*')
         .eq('user_id', adminUser.id)
-        .single()
+        .single(), '管理员资料加载超时，请检查网络连接后刷新。')
 
       if (error || !data) {
         navigate('/') // Kick non-admins back to home
@@ -37,7 +42,11 @@ export default function AdminDashboard() {
         setLoading(false)
       }
     }
-    checkAdmin()
+    checkAdmin().catch((error) => {
+      console.error('Admin session check failed:', error)
+      setLoading(false)
+      navigate('/admin/login', { replace: true, state: { error: error.message } })
+    })
   }, [adminUser, authLoading, navigate])
 
   const handleLogout = async () => {
