@@ -7,7 +7,7 @@ import EnrollmentManagement from './EnrollmentManagement'
 import ClassDocumentManagement from './ClassDocumentManagement'
 
 export default function AdminDashboard() {
-  const { adminUser, adminSignOut } = useAdminAuth()
+  const { adminUser, adminSignOut, loading: authLoading } = useAdminAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('classes') // 'classes' or 'students'
@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     // Verify admin status on mount
     const checkAdmin = async () => {
+      if (authLoading) return
       if (!adminUser) {
         navigate('/admin/login')
         return
@@ -37,7 +38,7 @@ export default function AdminDashboard() {
       }
     }
     checkAdmin()
-  }, [adminUser, navigate])
+  }, [adminUser, authLoading, navigate])
 
   const handleLogout = async () => {
     await adminSignOut()
@@ -59,6 +60,14 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen bg-[var(--ui-page)] text-[var(--ui-muted)] flex items-center justify-center">
         Loading...
+      </div>
+    )
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--ui-page)] text-[var(--ui-muted)] flex items-center justify-center">
+        正在验证管理员会话...
       </div>
     )
   }

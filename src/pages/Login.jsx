@@ -15,7 +15,7 @@ export default function Login() {
   // 'student' or 'admin'
   const [role, setRole] = useState('student')
   
-  const { register, handleSubmit, formState: { errors }, reset } = useForm()
+  const { register, handleSubmit, reset } = useForm()
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -47,18 +47,6 @@ export default function Login() {
         
         if (error) throw error
         if (!user) throw new Error('登录失败')
-
-        // 2. Check if user is admin
-        const { data: adminData, error: adminError } = await supabaseAdmin
-          .from('admins')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (adminError || !adminData) {
-          await supabaseAdmin.auth.signOut()
-          throw new Error('该账号没有管理员权限')
-        }
 
         navigate('/admin/dashboard')
       }
