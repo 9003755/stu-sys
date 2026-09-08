@@ -156,6 +156,7 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
     setZipProgress({ phase: 'download', completed: 0, total: items.length })
     try {
       const zip = new JSZip()
+      const classFolder = zip.folder(className)
       const failures = []
       let nextIndex = 0
       let completed = 0
@@ -167,7 +168,7 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
           const item = items[index]
           try {
             const blob = await downloadStorageBlob(item.path)
-            zip.folder(item.folder).file(item.filename, blob)
+            classFolder.folder(item.folder).file(item.filename, blob)
           } catch (error) {
             failures.push(`${item.label}（${error.message}）`)
           } finally {
