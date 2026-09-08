@@ -82,12 +82,29 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
       alert('资料已替换')
     } catch (error) { alert(`替换失败：${error.message}`) }
   }
-  const removeFiles = async (paths) => { if (paths?.filter(Boolean).length) await supabaseAdmin.storage.from(BUCKET).remove(paths.filter(Boolean)) }
+  const removeFiles = async (paths) => {
+    const targets = paths?.filter(Boolean) || []
+    if (!targets.length) return
+    const { error } = await supabaseAdmin.storage.from(BUCKET).remove(targets)
+    if (error) throw error
+  }
   const deleteSubmission = async (submission) => {
     if (!window.confirm(`确定删除“${submission.submitted_name}”的两份资料吗？`)) return
-    const { data, error } = await supabaseAdmin.rpc('delete_class_document_submission', { target_submission_id: submission.id })
+    // Use the row id directly here. Older deployments have a buggy delete RPC
+    // that tries to coerce a whole composite record into UUID text. RLS still
+    // limits this delete to submissions belonging to the signed-in admin's
+    // classes, and the migration fixes the RPC for deployments that use it.
+    const { error } = await supabaseAdmin
+      .from('class_document_submissions')
+      .delete()
+      .eq('id', submission.id)
     if (error) return alert(`删除失败：${error.message}`)
-    await removeFiles([data.criminal_record_path, data.health_declaration_path]); await load()
+    try {
+      await removeFiles([submission.criminal_record_path, submission.health_declaration_path])
+    } catch (fileError) {
+      return alert(`资料记录已删除，但图片文件清理失败：${fileError.message}`)
+    }
+    await load()
   }
   const resolveSubmission = async (submission, enrollmentId) => {
     if (!enrollmentId) return
