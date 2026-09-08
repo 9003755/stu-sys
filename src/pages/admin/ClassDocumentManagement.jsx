@@ -86,7 +86,7 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
     const targets = paths?.filter(Boolean) || []
     if (!targets.length) return
     const { error } = await supabaseAdmin.storage.from(BUCKET).remove(targets)
-    if (error) throw error
+    return error || null
   }
   const deleteSubmission = async (submission) => {
     if (!window.confirm(`确定删除“${submission.submitted_name}”的两份资料吗？`)) return
@@ -99,11 +99,8 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
       .delete()
       .eq('id', submission.id)
     if (error) return alert(`删除失败：${error.message}`)
-    try {
-      await removeFiles([submission.criminal_record_path, submission.health_declaration_path])
-    } catch (fileError) {
-      return alert(`资料记录已删除，但图片文件清理失败：${fileError.message}`)
-    }
+    const fileError = await removeFiles([submission.criminal_record_path, submission.health_declaration_path])
+    if (fileError) return alert(`资料记录已删除，但图片文件清理失败：${fileError.message}`)
     await load()
   }
   const resolveSubmission = async (submission, enrollmentId) => {
