@@ -94,11 +94,13 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
     // that tries to coerce a whole composite record into UUID text. RLS still
     // limits this delete to submissions belonging to the signed-in admin's
     // classes, and the migration fixes the RPC for deployments that use it.
-    const { error } = await supabaseAdmin
+    const { data: deletedRows, error } = await supabaseAdmin
       .from('class_document_submissions')
       .delete()
       .eq('id', submission.id)
+      .select('id')
     if (error) return alert(`删除失败：${error.message}`)
+    if (!deletedRows?.length) return alert('删除失败：资料记录不存在或当前管理员无权删除')
     const fileError = await removeFiles([submission.criminal_record_path, submission.health_declaration_path])
     if (fileError) return alert(`资料记录已删除，但图片文件清理失败：${fileError.message}`)
     await load()
