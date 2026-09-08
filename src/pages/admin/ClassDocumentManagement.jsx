@@ -4,7 +4,14 @@ import JSZip from 'jszip'
 import { supabaseAdmin } from '../../lib/supabase'
 
 const BUCKET = 'class-submission-documents'
+const ZIP_DOWNLOAD_TIMEOUT_MS = 45 * 1000
+const ZIP_SIGNED_URL_TIMEOUT_MS = 20 * 1000
+const ZIP_DOWNLOAD_CONCURRENCY = 4
 const safeName = (value) => String(value || '未命名').replace(/[\\/:*?"<>|]/g, '_')
+const withTimeout = (promise, timeoutMs, message) => new Promise((resolve, reject) => {
+  const timer = window.setTimeout(() => reject(new Error(message)), timeoutMs)
+  promise.then(resolve, reject).finally(() => window.clearTimeout(timer))
+})
 const toJpeg = (file) => new Promise((resolve, reject) => {
   const image = new Image()
   const url = URL.createObjectURL(file)
@@ -27,6 +34,7 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
   const [classId, setClassId] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [zipProgress, setZipProgress] = useState(null)
   const [preview, setPreview] = useState(null)
 
   const load = useCallback(async () => {
@@ -111,26 +119,92 @@ export default function ClassDocumentManagement({ initialClassId = '' }) {
     if (error) return alert(`归档失败：${error.message}`)
     await removeFiles(data.replaced_paths || []); await load()
   }
-  const downloadZip = async () => {
-    setBusy(true)
+  const downloadStorageBlob = async (path) => {
+    if (!path) throw new Error('资料路径为空')
+    const { data: signed, error: signedError } = await withTimeout(
+      supabaseAdmin.storage.from(BUCKET).createSignedUrl(path, 600),
+      ZIP_SIGNED_URL_TIMEOUT_MS,
+      `获取下载地址超时（${ZIP_SIGNED_URL_TIMEOUT_MS / 1000} 秒）`
+    )
+    if (signedError) throw signedError
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), ZIP_DOWNLOAD_TIMEOUT_MS)
     try {
-      const zip = new JSZip(); const className = safeName(classes.find((item) => item.id === classId)?.name)
-      for (const student of classStudents) {
-        const submission = matched.get(student.id); if (!submission) continue
-        const name = safeName(student.profiles?.real_name); const folder = zip.folder(name)
-        for (const [path, filename] of [[submission.criminal_record_path, `${name}+无犯罪记录.jpg`], [submission.health_declaration_path, `${name}+身体健康申明.jpg`]]) {
-          const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(path); if (error) throw error; folder.file(filename, data)
+      const response = await fetch(signed.signedUrl, { signal: controller.signal, cache: 'no-store' })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return await response.blob()
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error(`下载超时（${ZIP_DOWNLOAD_TIMEOUT_MS / 1000} 秒）`)
+      throw error
+    } finally {
+      window.clearTimeout(timeout)
+    }
+  }
+  const downloadZip = async () => {
+    const className = safeName(classes.find((item) => item.id === classId)?.name)
+    const items = classStudents.flatMap((student) => {
+      const submission = matched.get(student.id)
+      if (!submission) return []
+      const name = safeName(student.profiles?.real_name)
+      return [
+        { path: submission.criminal_record_path, folder: name, filename: `${name}+无犯罪记录.jpg`, label: `${name}+无犯罪记录` },
+        { path: submission.health_declaration_path, folder: name, filename: `${name}+身体健康申明.jpg`, label: `${name}+身体健康申明` },
+      ]
+    })
+    if (!items.length) return alert('当前班级没有已提交的资料，暂时无法生成 ZIP')
+    setBusy(true)
+    setZipProgress({ phase: 'download', completed: 0, total: items.length })
+    try {
+      const zip = new JSZip()
+      const failures = []
+      let nextIndex = 0
+      let completed = 0
+      const worker = async () => {
+        while (true) {
+          const index = nextIndex
+          nextIndex += 1
+          if (index >= items.length) return
+          const item = items[index]
+          try {
+            const blob = await downloadStorageBlob(item.path)
+            zip.folder(item.folder).file(item.filename, blob)
+          } catch (error) {
+            failures.push(`${item.label}（${error.message}）`)
+          } finally {
+            completed += 1
+            setZipProgress({ phase: 'download', completed, total: items.length })
+          }
         }
       }
-      const blob = await zip.generateAsync({ type: 'blob' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${className}.zip`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000)
-    } catch (error) { alert(`批量下载失败：${error.message}`) } finally { setBusy(false) }
+      await Promise.all(Array.from({ length: Math.min(ZIP_DOWNLOAD_CONCURRENCY, items.length) }, () => worker()))
+      if (failures.length) throw new Error(`以下资料下载失败：\n${failures.join('\n')}`)
+      setZipProgress({ phase: 'zip', completed: items.length, total: items.length })
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' }, (metadata) => {
+        setZipProgress({ phase: 'zip', completed: Math.round(metadata.percent), total: 100 })
+      })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `${className}.zip`
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(link.href), 60 * 1000)
+      setZipProgress({ phase: 'done', completed: 1, total: 1 })
+    } catch (error) {
+      alert(`批量下载失败：${error.message}`)
+      setZipProgress({ phase: 'error', completed: 0, total: items.length })
+    } finally {
+      setBusy(false)
+      window.setTimeout(() => setZipProgress(null), 5000)
+    }
   }
 
   if (loading) return <div className="p-8 text-center text-gray-500">加载中...</div>
   return <div className="space-y-6">
     <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-[var(--ui-border)] bg-white p-4 shadow-sm">
       <label className="text-sm font-medium">班级<select value={classId} onChange={(event) => setClassId(event.target.value)} className="ml-3 rounded border px-3 py-2">{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <div className="flex gap-2"><button type="button" onClick={load} className="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm"><RefreshCw size={16} />刷新</button><button type="button" onClick={downloadZip} disabled={busy || !classId} className="inline-flex items-center gap-2 rounded bg-[var(--ui-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><FileArchive size={17} />{busy ? '正在打包...' : '下载全班 ZIP'}</button></div>
+      <div className="flex flex-wrap items-center justify-end gap-2"><button type="button" onClick={load} className="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm"><RefreshCw size={16} />刷新</button><button type="button" onClick={downloadZip} disabled={busy || !classId} className="inline-flex items-center gap-2 rounded bg-[var(--ui-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><FileArchive size={17} />{busy ? (zipProgress?.phase === 'zip' ? `正在生成 ZIP ${zipProgress.completed}%` : `正在下载 ${zipProgress?.completed || 0}/${zipProgress?.total || 0}`) : '下载全班 ZIP'}</button>{zipProgress?.phase === 'done' ? <span role="status" className="text-sm text-green-700">ZIP 已生成，正在下载</span> : null}</div>
     </div>
     <div className="overflow-x-auto rounded-lg border border-[var(--ui-border)] bg-white shadow-sm"><table className="min-w-full text-sm"><thead className="bg-gray-50 text-left"><tr><th className="px-4 py-3">学员</th><th className="px-4 py-3">提交状态</th><th className="px-4 py-3">无犯罪记录</th><th className="px-4 py-3">身体健康申明</th><th className="px-4 py-3">操作</th></tr></thead><tbody>{classStudents.map((student) => { const submission = matched.get(student.id); const name = safeName(student.profiles?.real_name); return <tr key={student.id} className="border-t"><td className="px-4 py-3 font-medium">{name}</td><td className="px-4 py-3"><span className={submission ? 'text-green-700' : 'text-amber-700'}>{submission ? '已提交两份' : '未提交'}</span></td><td className="px-4 py-3">{submission ? <div className="flex gap-2"><button type="button" title="预览" onClick={() => view(submission.criminal_record_path, `${name}+无犯罪记录`)} className="text-[var(--ui-primary)]"><Eye size={18} /></button><button type="button" title="下载" onClick={() => download(submission.criminal_record_path, `${name}+无犯罪记录.jpg`)} className="text-[var(--ui-primary)]"><Download size={18} /></button><label title="替换" className="cursor-pointer text-amber-700"><Upload size={18} /><input type="file" accept="image/*" className="hidden" onChange={(event) => replaceDocument(submission.id, submission.criminal_record_path, event.target.files?.[0])} /></label></div> : '-'}</td><td className="px-4 py-3">{submission ? <div className="flex gap-2"><button type="button" title="预览" onClick={() => view(submission.health_declaration_path, `${name}+身体健康申明`)} className="text-[var(--ui-primary)]"><Eye size={18} /></button><button type="button" title="下载" onClick={() => download(submission.health_declaration_path, `${name}+身体健康申明.jpg`)} className="text-[var(--ui-primary)]"><Download size={18} /></button><label title="替换" className="cursor-pointer text-amber-700"><Upload size={18} /><input type="file" accept="image/*" className="hidden" onChange={(event) => replaceDocument(submission.id, submission.health_declaration_path, event.target.files?.[0])} /></label></div> : '-'}</td><td className="px-4 py-3">{submission ? <button type="button" onClick={() => deleteSubmission(submission)} className="inline-flex items-center gap-1 text-red-700"><Trash2 size={16} />删除</button> : '-'}</td></tr> })}</tbody></table></div>
     {pending.length ? <section className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4"><h2 className="font-semibold text-amber-950">待核对姓名资料（{pending.length}）</h2><p className="mt-1 text-sm text-amber-800">以下姓名未匹配班级名单，必须选择正确学员归档或删除。</p><div className="mt-3 space-y-3">{pending.map((item) => <div key={item.id} className="rounded border border-amber-200 bg-white p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><b>{item.submitted_name}</b><span className="ml-2 text-xs text-amber-700">名单中无此姓名</span></div><button type="button" onClick={() => deleteSubmission(item)} className="inline-flex items-center gap-1 text-sm text-red-700"><Trash2 size={16} />删除</button></div><div className="mt-3 flex flex-wrap items-center gap-3"><span className="text-sm font-medium">无犯罪记录</span><button type="button" onClick={() => view(item.criminal_record_path, `${item.submitted_name}+无犯罪记录`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Eye size={16} />预览</button><button type="button" onClick={() => download(item.criminal_record_path, `${safeName(item.submitted_name)}+无犯罪记录.jpg`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Download size={16} />下载</button><span className="ml-2 text-sm font-medium">身体健康申明</span><button type="button" onClick={() => view(item.health_declaration_path, `${item.submitted_name}+身体健康申明`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Eye size={16} />预览</button><button type="button" onClick={() => download(item.health_declaration_path, `${safeName(item.submitted_name)}+身体健康申明.jpg`)} className="inline-flex items-center gap-1 text-sm text-[var(--ui-primary)]"><Download size={16} />下载</button></div><label className="mt-3 block text-sm font-medium">修改为正确姓名<select defaultValue="" onChange={(event) => resolveSubmission(item, event.target.value)} className="ml-3 rounded border px-2 py-1 text-sm"><option value="">请选择本班学员</option>{classStudents.filter((student) => !matched.has(student.id)).map((student) => <option key={student.id} value={student.id}>{student.profiles?.real_name}</option>)}</select></label></div>)}</div></section> : null}
