@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --vercel-primary: #1d4ed8;
+  --vercel-primary: #007aff;
   --vercel-on-primary: #ffffff;
-  --vercel-ink: #0f172a;
-  --vercel-body: #334155;
-  --vercel-mute: #64748b;
-  --vercel-hairline: #e2e8f0;
-  --vercel-hairline-strong: #cbd5e1;
+  --vercel-ink: #1d1d1f;
+  --vercel-body: #3a3a3c;
+  --vercel-mute: #6e6e73;
+  --vercel-hairline: #e5e5ea;
+  --vercel-hairline-strong: #d1d1d6;
   --vercel-canvas: #ffffff;
   --vercel-canvas-soft: #f8fafc;
   --vercel-canvas-soft-2: #f1f5f9;
@@ -15,30 +15,30 @@
   --vercel-link-deep: #1e40af;
   --vercel-error: #dc2626;
   --vercel-warning: #d97706;
-  --ui-primary: #1d4ed8;
-  --ui-primary-hover: #1e40af;
-  --ui-primary-soft: #eff6ff;
-  --ui-cyan: #0891b2;
-  --ui-page: #f6f8fb;
+  --ui-primary: #007aff;
+  --ui-primary-hover: #0066d6;
+  --ui-primary-soft: #eaf3ff;
+  --ui-cyan: #5ac8fa;
+  --ui-page: #f5f5f7;
   --ui-card: #ffffff;
-  --ui-surface: #f8fafc;
-  --ui-border: #e2e8f0;
-  --ui-border-strong: #cbd5e1;
-  --ui-title: #0f172a;
-  --ui-text: #334155;
-  --ui-muted: #64748b;
-  --ui-subtle: #94a3b8;
-  --ui-success: #16a34a;
-  --ui-success-bg: #f0fdf4;
-  --ui-warning: #d97706;
-  --ui-warning-bg: #fffbeb;
-  --ui-danger: #dc2626;
-  --ui-danger-bg: #fef2f2;
-  --ui-radius-sm: 6px;
-  --ui-radius-md: 8px;
-  --ui-radius-lg: 12px;
-  --ui-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --ui-shadow-modal: 0 16px 40px rgba(15, 23, 42, 0.18);
+  --ui-surface: #f2f2f7;
+  --ui-border: #e5e5ea;
+  --ui-border-strong: #d1d1d6;
+  --ui-title: #1d1d1f;
+  --ui-text: #3a3a3c;
+  --ui-muted: #6e6e73;
+  --ui-subtle: #8e8e93;
+  --ui-success: #34c759;
+  --ui-success-bg: #eaf8ee;
+  --ui-warning: #ff9f0a;
+  --ui-warning-bg: #fff5df;
+  --ui-danger: #ff3b30;
+  --ui-danger-bg: #ffebe9;
+  --ui-radius-sm: 9px;
+  --ui-radius-md: 12px;
+  --ui-radius-lg: 16px;
+  --ui-shadow-card: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.035);
+  --ui-shadow-modal: 0 24px 70px rgba(0,0,0,.22);
 }
 
 html,
@@ -50,11 +50,18 @@ body,
 body {
   background: var(--ui-page);
   color: var(--vercel-ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji",
-    "Segoe UI Emoji";
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* Apple-inspired system-wide surface, typography and control treatment. */
+button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button { font-weight: 600; letter-spacing: -0.01em; transition: transform .16s ease, background-color .16s ease, box-shadow .16s ease, border-color .16s ease; }
+button:active:not(:disabled) { transform: scale(.98); }
+button:focus-visible, a:focus-visible { outline: 3px solid rgba(0,122,255,.28); outline-offset: 2px; }
+main { animation: apple-page-in .28s ease both; }
+@keyframes apple-page-in { from { opacity: .01; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 ::selection {
   background: var(--vercel-ink);
@@ -69,11 +76,7 @@ a:hover {
   color: var(--vercel-link-deep);
 }
 
-.vercel-hero-bg {
-  background:
-    linear-gradient(180deg, rgba(239, 246, 255, 0.88), rgba(246, 248, 251, 0.96) 42%, var(--ui-page)),
-    linear-gradient(135deg, rgba(29, 78, 216, 0.08), rgba(8, 145, 178, 0.06));
-}
+.vercel-hero-bg { background: var(--ui-page); }
 
 .vercel-card {
   background: var(--vercel-canvas);
@@ -81,6 +84,19 @@ a:hover {
   border-radius: var(--ui-radius-lg);
   box-shadow: var(--ui-shadow-card);
 }
+
+nav { background: rgba(255,255,255,.86) !important; border-color: rgba(60,60,67,.12) !important; backdrop-filter: saturate(180%) blur(22px); }
+nav .bg-\[var\(--ui-primary\)\] { box-shadow: 0 5px 14px rgba(0,122,255,.22); }
+nav button { min-height: 38px; }
+section, .vercel-card, .bg-white.shadow, .bg-white.shadow-sm { border-radius: var(--ui-radius-lg) !important; }
+table { border-spacing: 0; }
+thead th { height: 44px; color: var(--ui-muted) !important; font-size: 12px; letter-spacing: .01em; }
+tbody tr { height: 58px; }
+tbody tr:hover { background: rgba(0,122,255,.035) !important; }
+input, select, textarea { min-height: 42px; border-radius: 11px !important; border-color: var(--ui-border-strong) !important; background: rgba(255,255,255,.92) !important; }
+input:focus, select:focus, textarea:focus { border-color: var(--ui-primary) !important; box-shadow: 0 0 0 4px rgba(0,122,255,.14) !important; }
+.fixed.inset-0 { backdrop-filter: blur(8px); }
+.fixed.inset-0 > div { border: 1px solid rgba(60,60,67,.14); }
 
 /* Aviation SaaS UI refresh: visual overrides only. */
 button,
