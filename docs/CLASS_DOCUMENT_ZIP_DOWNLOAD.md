@@ -37,6 +37,6 @@ npx eslint src/lib/resilientDownload.js src/pages/admin/ClassDocumentArchive.js 
 npm run build
 ```
 
-浏览器测试先启动 `npm run dev -- --host 127.0.0.1`，然后运行 `node tests/classDocumentArchive.browser.mjs`。测试需要 Playwright 和本机 Edge；可通过 `PLAYWRIGHT_MODULE` 指向现有 Playwright 的 `index.mjs`，或使用标准安装的 Playwright。`ZIP_TEST_URL` 可覆盖本地开发地址。
+浏览器测试先运行 `npm ci`、`npx playwright install chromium`，在一个终端启动 `npm run dev -- --host 127.0.0.1 --port 5173 --strictPort`，在另一个终端运行 `npm run test:browser:zip`。Playwright 已固定在开发依赖中，默认使用安装的 Chromium；设置 `ZIP_TEST_CHANNEL=msedge` 可使用本机 Edge。`PLAYWRIGHT_MODULE` 是可选的预装模块路径，常规安装不需要。`ZIP_TEST_URL` 可覆盖本地开发地址。
 
 浏览器测试使用隔离的模拟管理员、班级、资料和本地文件服务，不访问真实 Supabase 业务数据。覆盖临时失败重试、失败后复用成功文件、暂停后继续、离线恢复、48 秒持续传输、重复保存，以及 ZIP 内容和目录校验。桌面/手机截图保存在系统临时目录的 `student-system-zip-qa` 下。

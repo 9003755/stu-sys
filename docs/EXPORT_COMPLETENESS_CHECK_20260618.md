@@ -4,7 +4,7 @@
 - 目标：仅在管理员点击“下载报名资料（打包下载）”时，对勾选学员做资料完整性检查；发现不完整则提示管理员，并对该学员做标记
 - 实现范围：仅前端（不新增后端字段、不新增 RPC、不增加额外请求）
 - 改动文件：
-  - [EnrollmentManagement.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/pages/admin/EnrollmentManagement.jsx)
+  - [EnrollmentManagement.jsx](../src/pages/admin/EnrollmentManagement.jsx)
 
 ## 1. 背景与问题
 
@@ -71,7 +71,7 @@
   - `summary: string`（用于 UI 展示与弹窗）
 
 对应变更参考：
-- [EnrollmentManagement.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/pages/admin/EnrollmentManagement.jsx)
+- [EnrollmentManagement.jsx](../src/pages/admin/EnrollmentManagement.jsx)
 
 ### 4.2 仅在导出点击时计算并缓存结果
 

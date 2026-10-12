@@ -27,3 +27,13 @@ dist-ssr
 
 .trae/skills/
 h
+
+# Local Netlify folder
+.netlify
+
+# Private configuration, local Supabase state, and historical workspace backups
+.env.*
+!.env.example
+supabase/.temp/
+.codex-ui-backups/
+vite-ui.err

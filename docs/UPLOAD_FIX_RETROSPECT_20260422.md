@@ -368,8 +368,8 @@
 
 ## 相关代码
 
-- [StudentProfile.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/pages/StudentProfile.jsx)
-- [AuthContext.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/contexts/AuthContext.jsx)
-- [supabase.js](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/lib/supabase.js)
-- [App.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/App.jsx)
-- [EnrollConfirmation.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/pages/EnrollConfirmation.jsx)
+- [StudentProfile.jsx](../src/pages/StudentProfile.jsx)
+- [AuthContext.jsx](../src/contexts/AuthContext.jsx)
+- [supabase.js](../src/lib/supabase.js)
+- [App.jsx](../src/App.jsx)
+- [EnrollConfirmation.jsx](../src/pages/EnrollConfirmation.jsx)

@@ -1,5 +1,7 @@
 # Supabase 故障恢复清单
 
+> 历史专项手册：只覆盖容量巡检邮件，不是数据库、账号或学员文件的完整恢复指南。系统备份与恢复请用 [BACKUP_RESTORE.md](BACKUP_RESTORE.md)，当前部署配置请用 [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md)。以下发件/函数/计划信息须在现网重新核对。
+
 适用范围：`stu_sys`
 
 - 项目 `ref`：`kmeybkqwicrdfksbagfz`
@@ -174,7 +176,7 @@ where jobname = 'send-capacity-report-every-3-days';
 说明：
 
 - 该表达式按 UTC 执行
-- 等价于北京时间每 3 天上午 `09:00`
+- 按 UTC 月内日期 1、4、7……的 01:00 执行，对应北京时间 `09:00`；月界不保证严格间隔 72 小时
 
 ## 7. 如果定时任务丢了，重新创建
 

@@ -1,5 +1,7 @@
 # Supabase 容量巡检邮件
 
+> 历史部署记录，最后线上验证为 2026-06-19。当前交接请先看[部署手册](DEPLOYMENT_RUNBOOK.md)和[数据库手册](DATABASE_RUNBOOK.md)。这不是业务数据备份；容量统计当前只计入 `student-documents` 桶。
+
 ## 目标
 
 每 3 天执行一次容量巡检，并将结果邮件发送到固定邮箱 `9003755@qq.com`。
@@ -48,7 +50,7 @@
 ### 数据库侧
 
 - RPC：`public.get_capacity_report_snapshot()`
-- 位置：[`20260618000002_capacity_report_snapshot_rpc.sql`](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/supabase/migrations/20260618000002_capacity_report_snapshot_rpc.sql)
+- 位置：[`20260618000002_capacity_report_snapshot_rpc.sql`](../supabase/migrations/20260618000002_capacity_report_snapshot_rpc.sql)
 
 职责：
 
@@ -59,8 +61,8 @@
 
 ### Edge Function
 
-- 函数名：`send-capacity-report`
-- 位置：[`send-capacity-report/index.ts`](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/supabase/functions/send-capacity-report/index.ts)
+- 本地源码目录：`send-capacity-report`；线上部署 slug：`quick-actionsend-capacity-report`
+- 位置：[`send-capacity-report/index.ts`](../supabase/functions/send-capacity-report/index.ts)
 
 职责：
 
@@ -99,9 +101,7 @@ supabase secrets set \
 
 ## 部署 Edge Function
 
-```bash
-supabase functions deploy send-capacity-report
-```
+线上函数 slug 为 `quick-actionsend-capacity-report`，与本地目录名不同。维护既有环境时，在 Supabase Dashboard 打开该 slug，用本地 `supabase/functions/send-capacity-report/index.ts` 更新代码，并保留/核对网关认证及 Secrets。不要直接按本地目录名发布第二个函数，否则定时任务仍调用旧函数。CLI 发布与名称映射要求见[部署手册](DEPLOYMENT_RUNBOOK.md)。
 
 ## 手动测试
 

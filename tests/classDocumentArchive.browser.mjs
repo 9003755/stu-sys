@@ -43,7 +43,12 @@ const fileServer = http.createServer((req, res) => {
 })
 await new Promise(resolve => fileServer.listen(0, '127.0.0.1', resolve))
 const filesUrl = `http://127.0.0.1:${fileServer.address().port}`
-const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--disable-features=LocalNetworkAccessChecks'] })
+// Default to Playwright's installed Chromium; ZIP_TEST_CHANNEL=msedge uses local Edge.
+const browser = await chromium.launch({
+  ...(process.env.ZIP_TEST_CHANNEL ? { channel: process.env.ZIP_TEST_CHANNEL } : {}),
+  headless: true,
+  args: ['--disable-features=LocalNetworkAccessChecks'],
+})
 const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1280, height: 900 } })
 const page = await context.newPage()
 const errors = []

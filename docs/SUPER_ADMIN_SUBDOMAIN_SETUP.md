@@ -1,5 +1,7 @@
 # 超级管理员独立子域名部署说明
 
+> 这是历史独立子域名方案，示例域名不是当前生产配置。2026-10-12 当前站点仍使用 `https://stu-system.netlify.app/super/login`。以[部署手册](DEPLOYMENT_RUNBOOK.md)为准；本文件的 `VITE_SUPABASE_SUPER_*` 变量当前代码未读取，不能据此假设超管已连接独立数据库。
+
 ## 目标
 
 将当前超级管理员后台从“必须本地启动才能访问”，改为可直接通过独立子域名访问，例如：
@@ -13,11 +15,11 @@
 
 本次代码已完成以下最小改造：
 
-- 新增站点地址配置工具：[siteUrls.js](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/lib/siteUrls.js)
+- 新增站点地址配置工具：[siteUrls.js](../src/lib/siteUrls.js)
 - 普通管理员生成报名链接时，改为使用 `VITE_APP_SITE_URL`
 - 超级管理员页面里的普通管理员注册链接，改为使用 `VITE_APP_SITE_URL`
 - 修复超级管理员“返回控制台”错误路由
-- 新增环境变量样例：[.env.example](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/.env.example)
+- 新增环境变量样例：[.env.example](../.env.example)
 
 ## 必需环境变量
 
@@ -112,8 +114,8 @@ dist
 
 ## 相关文件
 
-- [siteUrls.js](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/lib/siteUrls.js)
-- [ClassManagement.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/pages/admin/ClassManagement.jsx)
-- [SuperDashboard.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/pages/super/SuperDashboard.jsx)
-- [AllStudents.jsx](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/src/pages/super/AllStudents.jsx)
-- [.env.example](file:///d:/Ai编程学习/学员报名系统（再试一次）（完成）/.env.example)
+- [siteUrls.js](../src/lib/siteUrls.js)
+- [ClassManagement.jsx](../src/pages/admin/ClassManagement.jsx)
+- [SuperDashboard.jsx](../src/pages/super/SuperDashboard.jsx)
+- [AllStudents.jsx](../src/pages/super/AllStudents.jsx)
+- [.env.example](../.env.example)
